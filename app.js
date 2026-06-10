@@ -11,6 +11,8 @@ const SLIDER_DEFS = [
   { id: 'register',    label: 'Register',    levels: ['Sub bass', 'Bass', 'Mid', 'High', 'Top'] },
   { id: 'range',       label: 'Octave span', levels: ['Narrow', 'Tight', 'Medium', 'Wide', 'Broad'] },
   { id: 'chromatic',   label: 'Chromatics',  levels: ['Pure', 'Hint', 'Some', 'Spicy', 'Heavy'] },
+  { id: 'swing',       label: 'Swing',       levels: ['Straight', 'Subtle', 'Light', 'Swung', 'Triplet'] },
+  { id: 'pocket',      label: 'Pocket',      levels: ['On grid', 'Relaxed', 'Laid-back', 'Dragging', 'Dilla'] },
 ];
 
 // ── Role × Genre matrix ──────────────────────────────────────────────
@@ -41,12 +43,23 @@ const GENRES = [
 ];
 
 const ROLE_BASE = {
-  bass:   { density: 0.50, variation: 0.20, syncopation: 0.35, length: 0.50, register: 0.10, range: 0.30, chromatic: 0.05 },
-  lead:   { density: 0.60, variation: 0.40, syncopation: 0.40, length: 0.45, register: 0.55, range: 0.50, chromatic: 0.05 },
-  melody: { density: 0.25, variation: 0.60, syncopation: 0.15, length: 0.85, register: 0.60, range: 0.45, chromatic: 0.00 },
-  chord:  { density: 0.45, variation: 0.30, syncopation: 0.50, length: 0.30, register: 0.55, range: 0.35, chromatic: 0.00 },
-  arp:    { density: 0.70, variation: 0.20, syncopation: 0.10, length: 0.30, register: 0.55, range: 0.50, chromatic: 0.00 },
-  drums:  { density: 0.50, variation: 0.35, syncopation: 0.25, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00 },
+  bass:   { density: 0.50, variation: 0.20, syncopation: 0.35, length: 0.50, register: 0.10, range: 0.30, chromatic: 0.05, swing: 0, pocket: 0 },
+  lead:   { density: 0.60, variation: 0.40, syncopation: 0.40, length: 0.45, register: 0.55, range: 0.50, chromatic: 0.05, swing: 0, pocket: 0 },
+  melody: { density: 0.25, variation: 0.60, syncopation: 0.15, length: 0.85, register: 0.60, range: 0.45, chromatic: 0.00, swing: 0, pocket: 0 },
+  chord:  { density: 0.45, variation: 0.30, syncopation: 0.50, length: 0.30, register: 0.55, range: 0.35, chromatic: 0.00, swing: 0, pocket: 0 },
+  arp:    { density: 0.70, variation: 0.20, syncopation: 0.10, length: 0.30, register: 0.55, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
+  drums:  { density: 0.50, variation: 0.35, syncopation: 0.25, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
+};
+
+// Groove defaults per genre — merged between ROLE_BASE and recipe overrides.
+// Jazz and lo-fi swing out of the box; machine genres stay dead straight.
+const GENRE_GROOVE = {
+  french:  { swing: 0.25 },
+  disco:   { swing: 0.25, pocket: 0.25 },
+  reggae:  { swing: 0.25, pocket: 0.50 },
+  jazz:    { swing: 0.75, pocket: 0.50 },
+  lofi:    { swing: 0.50, pocket: 0.75 },
+  // rock, latin, baroque, synth, minimal: straight (no entry)
 };
 
 // engine: 'riff' (Markov + templates), 'vocal' (riff with singability bias),
@@ -269,8 +282,9 @@ function applyCombo(roleId, genreId, { audition = false } = {}) {
   STATE.drumStyle = recipe.drumStyle ?? null;
 
   const base = ROLE_BASE[roleId];
+  const groove = GENRE_GROOVE[genreId] ?? {};
   for (const def of SLIDER_DEFS) {
-    STATE.sliders[def.id] = recipe.sliders?.[def.id] ?? base[def.id];
+    STATE.sliders[def.id] = recipe.sliders?.[def.id] ?? groove[def.id] ?? base[def.id];
   }
 
   document.querySelectorAll('#role-chips .chip').forEach(b =>
@@ -487,6 +501,8 @@ function generate(opts = {}) {
       sliders: STATE.sliders,
       seed,
     });
+    applyGroove(result.notes, STATE.sliders.swing ?? 0, STATE.sliders.pocket ?? 0,
+                result.ticksPerBar / 16, true, mulberry32(seed ^ 0xBEA7));
     STATE.currentResult = { main: result, voices: [], bars: ui.bars, bpm: ui.bpm, isDrums: true };
     document.getElementById('seed-display').textContent =
       `seed: ${seed.toString(16).padStart(8, '0')}   ·   ${ui.bars} bars @ ${ui.bpm} bpm   ·   ${comboLabel()}`;
@@ -529,6 +545,10 @@ function generate(opts = {}) {
       applyAcidSlides(result, 0.45 + (STATE.sliders.syncopation ?? 0.3) * 0.4, mulberry32(seed ^ 0x5EED));
     }
   }
+
+  // Groove applies before voices are built, so harmony voices inherit the feel.
+  applyGroove(result.notes, STATE.sliders.swing ?? 0, STATE.sliders.pocket ?? 0,
+              result.ticksPerBar / 16, false, mulberry32(seed ^ 0xBEA7));
 
   // Build harmonized voices with optional canonic delay. Done in a single pass:
   // pre-filter source notes by whether they'd still fall inside the phrase, then

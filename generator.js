@@ -914,6 +914,42 @@ function generateBerlin({ tonicMidi, scaleIntervals, bars = 4, chordProgression 
   return { notes, totalBars: bars, ticksPerBar, basePitch, tonicPc, scaleIntervals };
 }
 
+// ----- GROOVE (swing + pocket) -----
+// Post-processing applied to every engine's output, seeded so iterate-on-tweak
+// keeps the same feel.
+//
+// swing 0..1: shifts off-beats toward a triplet grid. Off-8ths (step % 4 === 2)
+// move up to 2/3 of a 16th late, off-16ths (odd steps) up to 1/3 — at swing = 1
+// the whole bar sits on a true triplet shuffle.
+//
+// pocket 0..1: laid-back feel. For drums the kick stays anchored to the grid
+// while snare/clap sit furthest back and hats/percussion relax slightly —
+// that gap IS the pocket. Melodic material relaxes everything except bar
+// downbeats. A few ticks of human jitter come along for free.
+function applyGroove(notes, swing, pocket, ticksPerStep, isDrums, rng) {
+  if (swing <= 0 && pocket <= 0) return;
+  for (const n of notes) {
+    const step = Math.round(n.startTicks / ticksPerStep);
+    let delay = 0;
+    if (swing > 0) {
+      if (step % 4 === 2) delay += swing * ticksPerStep * 0.66;
+      else if (step % 2 === 1) delay += swing * ticksPerStep * 0.33;
+    }
+    if (pocket > 0) {
+      const layback = pocket * ticksPerStep * 0.22;
+      if (isDrums) {
+        if (n.pitch === 38 || n.pitch === 39) delay += layback;       // snare/clap
+        else if (n.pitch !== 36) delay += layback * 0.6;              // hats/perc
+        // kick (36) stays anchored
+      } else {
+        delay += layback * (step % 16 === 0 ? 0.3 : 1);
+      }
+      delay += (rng() - 0.5) * pocket * 8;   // ±4 ticks of human jitter
+    }
+    if (delay !== 0) n.startTicks = Math.max(0, Math.round(n.startTicks + delay));
+  }
+}
+
 // ----- 303 ACID SLIDES -----
 // Overlapping notes read as glide on TB-303-style synths; exaggerated accent
 // contrast is the other half of the acid sound.
