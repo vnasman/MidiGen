@@ -308,6 +308,21 @@ const DRUM_STYLES = {
     [GM.SHAKER]:     { prob: [.8,.4,.8,.4, .8,.4,.8,.4, .8,.4,.8,.4, .8,.4,.8,.4], vel: 56, ghost: true },
     [GM.KICK]:       { prob: [0,0,0,0, 0,0,.5,0, 0,0,0,0, 0,0,.8,0], vel: 100 },
   },
+  // Reggae one drop: tyngdpunkten på 3:an (kick + rim ihop), luft på 1:an.
+  onedrop: {
+    [GM.KICK]:   { prob: [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0], vel: 110 },
+    [GM.RIM]:    { prob: [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0], vel: 95 },
+    [GM.CHAT]:   { prob: [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0], vel: 66 },
+    [GM.OHAT]:   { prob: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,.4,0], vel: 78 },
+    [GM.SHAKER]: { prob: [.3,.3,.3,.3, .3,.3,.3,.3, .3,.3,.3,.3, .3,.3,.3,.3], vel: 50, ghost: true },
+  },
+  // Lo-fi boom bap: lat kick, snare strax efter 2/4-känslan, glesa hats.
+  lofi: {
+    [GM.KICK]:   { prob: [1,0,0,.25, 0,0,.4,0, .6,0,.3,0, 0,0,0,0], vel: 100 },
+    [GM.SNARE]:  { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,.2], vel: 88 },
+    [GM.CHAT]:   { prob: [.8,0,.5,0, .8,0,.5,0, .8,0,.5,0, .8,0,.5,0], vel: 55 },
+    [GM.RIM]:    { prob: [0,0,.15,0, 0,0,0,.15, 0,.15,0,0, 0,0,.15,0], vel: 48, ghost: true },
+  },
 };
 
 // Fill material for the last bar of each 4-bar phrase: snare/tom runs over the

@@ -64,10 +64,14 @@
     <section class="panel">
       <h2>Stil</h2>
       <div class="preset-picker">
-        <label class="preset-label">
-          Välj stil
-          <select id="preset-select"></select>
-        </label>
+        <div class="chip-row">
+          <span class="chip-row-label">Vad</span>
+          <div class="chips" id="role-chips"></div>
+        </div>
+        <div class="chip-row">
+          <span class="chip-row-label">Känsla</span>
+          <div class="chips" id="genre-chips"></div>
+        </div>
         <div id="extensions-wrap" class="extensions-wrap" style="display:none">
           <label class="preset-label">
             Ackord-typ

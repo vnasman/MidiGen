@@ -66,13 +66,16 @@ function generateBarRhythm(style, density, syncopation, rng, role = 'lead') {
 }
 
 // ----- Melodic generation using bigrams + chord-tone bias -----
-// `role`: 'lead' (default) or 'bass'. Bass forces root on beat 1, biases stepwise
-// motion, prefers root/fifth on strong beats, and triggers occasional octave drops.
+// `role`: 'lead' (default), 'bass' or 'vocal'.
+// Bass forces root on beat 1, biases stepwise motion, prefers root/fifth.
+// Vocal biases stepwise motion AND applies gap-fill: after a leap, the line
+// strongly prefers to reverse direction by step (classic melody-writing rule).
 function generateBarMelody({ rhythm, style, scaleIntervals, tonicPc, chord, chromatic, range, rng, previousDeg = null, role = 'lead' }) {
   const bigrams = bigramsForStyle(style);
   const out = [];
   let currentMod = previousDeg != null ? mod7(previousDeg) : null;
   let currentOctaveOffset = 0;
+  let lastDelta = 0;   // signed scale-step interval of the previous move (gap-fill)
 
   const chordDegs = chordTonesInScale(chord, scaleIntervals, tonicPc);
   const rootDeg = chordDegs[0];
@@ -100,28 +103,56 @@ function generateBarMelody({ rhythm, style, scaleIntervals, tonicPc, chord, chro
       // Build biased weights into a fresh small array (still allocated per onset,
       // but no parseInt, no spread, no chained map). For typical n ≤ 5 this is
       // fine; switching to a reusable Float64Array buffer is possible but uglier.
-      const biased = new Array(n);
+      // Vocal: the corpus bigrams are leap-heavy (chord-tone fragments), so a
+      // pure re-weighting can never produce stepwise lines — the step candidates
+      // don't exist in the table. Give vocal ALL seven degrees as candidates,
+      // seeded with the bigram weight where present and a floor where not.
+      let cKeys = keys, cVals = vals, n2 = n;
+      if (role === 'vocal') {
+        cKeys = [0, 1, 2, 3, 4, 5, 6];
+        cVals = cKeys.map(d => {
+          const idx = keys.indexOf(d);
+          return idx >= 0 ? vals[idx] + 1 : 1;   // corpus-informed + floor
+        });
+        n2 = 7;
+      }
+      const biased = new Array(n2);
       const bassFifth = chordDegs[2];
-      for (let i = 0; i < n; i++) {
-        const deg = keys[i];
-        let w = vals[i];
-        if (isStrong && chordDegs.includes(deg)) w *= 3;
-        if (isDownbeat && chordDegs.includes(deg)) w *= 2.5;
+      for (let i = 0; i < n2; i++) {
+        const deg = cKeys[i];
+        let w = cVals[i];
+        // Chord-tone pull on strong beats — softer for vocal so stepwise
+        // motion isn't constantly yanked back to triad leaps.
+        const chordPull = role === 'vocal' ? 1.6 : 3;
+        if (isStrong && chordDegs.includes(deg)) w *= chordPull;
+        if (isDownbeat && chordDegs.includes(deg)) w *= role === 'vocal' ? 1.5 : 2.5;
+        let stepDist = deg - currentMod;
+        if (stepDist > 3) stepDist -= 7;
+        else if (stepDist < -3) stepDist += 7;
+        const abs = stepDist < 0 ? -stepDist : stepDist;
         if (role === 'bass') {
-          let stepDist = deg - currentMod;
-          if (stepDist > 3) stepDist -= 7;
-          else if (stepDist < -3) stepDist += 7;
-          const abs = stepDist < 0 ? -stepDist : stepDist;
           if (abs === 0) w *= 1.6;
           else if (abs === 1) w *= 3.0;
           else if (abs === 2) w *= 1.4;
           else w *= 0.35;
           if (deg === rootDeg) w *= 1.8;
           else if (deg === bassFifth) w *= 1.3;
+        } else if (role === 'vocal') {
+          // Singable lines: mostly stepwise, no repeated-note machine-gunning.
+          if (abs === 1) w *= 5.0;
+          else if (abs === 2) w *= 1.6;
+          else if (abs === 0) w *= 0.6;
+          else w *= 0.15;
+          // Gap-fill: after a leap (≥3 steps), reward reversing by step.
+          if (Math.abs(lastDelta) >= 3) {
+            const reverses = (lastDelta > 0 && stepDist < 0) || (lastDelta < 0 && stepDist > 0);
+            if (reverses && abs <= 2) w *= 4.0;
+            else if (!reverses && abs >= 3) w *= 0.1; // two leaps same way: nearly never
+          }
         }
         biased[i] = w;
       }
-      nextMod = pickWeighted(keys, biased, rng);
+      nextMod = pickWeighted(cKeys, biased, rng);
     }
 
     // Determine octave drift based on contour & range slider.
@@ -146,6 +177,7 @@ function generateBarMelody({ rhythm, style, scaleIntervals, tonicPc, chord, chro
     }
 
     out.push({ step: s, scaleStep, chromaticOffset });
+    lastDelta = stepDelta;
     currentMod = nextMod;
   }
   return out;
@@ -666,6 +698,238 @@ function generateDrums({ drumStyle, bars = 4, sliders = {}, seed = null }) {
 
   notes.sort((a, b2) => a.startTicks - b2.startTicks);
   return { notes, totalBars: bars, ticksPerBar, isDrums: true };
+}
+
+// ----- Shared helpers for the deterministic engines -----
+
+function chordsPerBarList(chordProgression, bars) {
+  const out = [];
+  for (let b = 0; b < bars; b++) {
+    if (!chordProgression || chordProgression.length === 0) out.push(null);
+    else if (chordProgression.length >= bars) out.push(chordProgression[b]);
+    else out.push(chordProgression[Math.floor((b / bars) * chordProgression.length)]);
+  }
+  return out;
+}
+
+// Nearest scale-step for an arbitrary MIDI pitch — lets harmony voices stay
+// diatonic even for engine-generated notes (approach tones snap to neighbors).
+function midiToNearestScaleStep(midi, tonicPc, scaleIntervals, basePitch) {
+  let best = 0, bestDist = Infinity;
+  for (let ss = -21; ss <= 28; ss++) {
+    const d = Math.abs(scaleStepToMidi(ss, tonicPc, scaleIntervals, basePitch) - midi);
+    if (d < bestDist) { bestDist = d; best = ss; }
+  }
+  return best;
+}
+
+// ----- ARPEGGIATOR -----
+// Deterministic chord-tone patterns — the right model for arps (Markov is not).
+// pattern: 'up' | 'down' | 'updown' | 'octave' | 'alberti'
+function generateArp({ tonicMidi, scaleIntervals, bars = 4, pattern = 'up', chordProgression = [], sliders = {}, seed = null }) {
+  const rng = mulberry32(seed ?? Math.floor(Math.random() * 0xFFFFFFFF));
+  const density = clamp(sliders.density ?? 0.6, 0, 1);
+  const syncopation = clamp(sliders.syncopation ?? 0.2, 0, 1);
+  const variation = clamp(sliders.variation ?? 0.2, 0, 1);
+  const lengthFactor = clamp(sliders.length ?? 0.3, 0, 1);
+  const registerSlider = clamp(sliders.register ?? 0.5, 0, 1);
+  const range = clamp(sliders.range ?? 0.5, 0, 1);
+
+  const tonicPc = ((tonicMidi % 12) + 12) % 12;
+  const basePitch = Math.round(36 + registerSlider * 36);
+  const ticksPerBar = STEPS_PER_BAR * TICKS_PER_STEP;
+  const chordPerBar = chordsPerBarList(chordProgression, bars);
+
+  // Rate: 8ths at low density, 16ths at high. Offbeat-mode if very syncopated.
+  const stepsPerNote = density < 0.45 ? 2 : 1;
+  const offbeatOnly = syncopation > 0.6;
+  const octaves = range >= 0.5 ? 2 : 1;
+
+  const notes = [];
+  let dirFlip = false;
+
+  for (let b = 0; b < bars; b++) {
+    const chord = chordPerBar[b];
+    const chordDegs = chordTonesInScale(chord, scaleIntervals, tonicPc);
+    // Build the pitch pool for this bar's chord across the octave span.
+    const pool = [];
+    for (let oct = 0; oct < octaves; oct++) {
+      for (const deg of chordDegs) pool.push(deg + 7 * oct);
+    }
+    pool.sort((a, b2) => a - b2);
+
+    // Pattern index sequence over the pool.
+    let seq;
+    switch (pattern) {
+      case 'down':    seq = [...pool].reverse(); break;
+      case 'updown':  seq = [...pool, ...pool.slice(1, -1).reverse()]; break;
+      case 'octave':  seq = [chordDegs[0], chordDegs[0] + 7]; break;   // root bounce
+      case 'alberti': seq = [pool[0], pool[2] ?? pool[0] + 7, pool[1] ?? pool[0], pool[2] ?? pool[0] + 7]; break;
+      default:        seq = [...pool];
+    }
+    // Variation: flip direction every 4 bars (and sometimes rotate start).
+    if (b > 0 && b % 4 === 0 && rng() < variation) dirFlip = !dirFlip;
+    const barSeq = dirFlip ? [...seq].reverse() : seq;
+
+    let seqIdx = 0;
+    for (let s = 0; s < STEPS_PER_BAR; s += stepsPerNote) {
+      if (offbeatOnly && (s % 4 === 0)) continue;   // rest on downbeats (skank-arp)
+      let scaleStep = barSeq[seqIdx % barSeq.length];
+      seqIdx++;
+      // Mutation: occasionally bump one note an octave (sparkle).
+      if (rng() < variation * 0.06) scaleStep += 7;
+
+      const pitch = clamp(scaleStepToMidi(scaleStep, tonicPc, scaleIntervals, basePitch), 0, 127);
+      const beatHead = s % 4 === 0;
+      notes.push({
+        pitch,
+        startTicks: b * ticksPerBar + s * TICKS_PER_STEP,
+        durationTicks: Math.max(40, Math.round(stepsPerNote * TICKS_PER_STEP * (0.3 + lengthFactor * 0.65))),
+        velocity: Math.round((beatHead ? 96 : 80) + (rng() - 0.5) * 8),
+        scaleStep,
+      });
+    }
+  }
+  return { notes, totalBars: bars, ticksPerBar, basePitch, tonicPc, scaleIntervals };
+}
+
+// ----- WALKING BASS (jazz) -----
+// Quarter notes: chord root on 1, chord/scale tones walking toward the next
+// bar's root, chromatic approach tone on beat 4. Swing it in your DAW.
+function generateWalkingBass({ tonicMidi, scaleIntervals, bars = 4, chordProgression = [], sliders = {}, seed = null }) {
+  const rng = mulberry32(seed ?? Math.floor(Math.random() * 0xFFFFFFFF));
+  const density = clamp(sliders.density ?? 0.4, 0, 1);
+  const variation = clamp(sliders.variation ?? 0.3, 0, 1);
+
+  const tonicPc = ((tonicMidi % 12) + 12) % 12;
+  const basePitch = 38;                       // around D1–D2: upright register
+  const ticksPerBar = STEPS_PER_BAR * TICKS_PER_STEP;
+  const quarter = 4 * TICKS_PER_STEP;
+  const chordPerBar = chordsPerBarList(chordProgression, bars);
+
+  const rootMidiOf = (chord) => {
+    const degs = chordTonesInScale(chord, scaleIntervals, tonicPc);
+    return scaleStepToMidi(degs[0], tonicPc, scaleIntervals, basePitch);
+  };
+
+  const notes = [];
+  for (let b = 0; b < bars; b++) {
+    const chord = chordPerBar[b];
+    const nextChord = chordPerBar[(b + 1) % bars];
+    const degs = chordTonesInScale(chord, scaleIntervals, tonicPc);
+    const r0 = rootMidiOf(chord);
+    const r1 = rootMidiOf(nextChord);
+
+    // Beat 4: chromatic approach into next root (from below or above).
+    const fromBelow = rng() < 0.6;
+    const beat4 = r1 + (fromBelow ? -1 : 1);
+
+    // Beats 2–3: chord tones / scale steps forming a path r0 → beat4.
+    const third = scaleStepToMidi(degs[1] ?? degs[0] + 2, tonicPc, scaleIntervals, basePitch);
+    const fifth = scaleStepToMidi(degs[2] ?? degs[0] + 4, tonicPc, scaleIntervals, basePitch);
+    const goingUp = beat4 >= r0;
+    let beat2 = goingUp ? Math.min(third, fifth) : Math.max(third, fifth);
+    let beat3 = goingUp ? Math.max(third, fifth) : Math.min(third, fifth);
+    // Variation: sometimes use a scale passing tone on beat 3 instead.
+    if (rng() < variation * 0.5) {
+      beat3 = midiToNearestScaleStep(Math.round((beat2 + beat4) / 2), tonicPc, scaleIntervals, basePitch);
+      beat3 = scaleStepToMidi(beat3, tonicPc, scaleIntervals, basePitch);
+    }
+
+    const beats = [r0, beat2, beat3, beat4];
+    for (let q = 0; q < 4; q++) {
+      const pitch = clamp(beats[q], 24, 60);
+      notes.push({
+        pitch,
+        startTicks: b * ticksPerBar + q * quarter,
+        durationTicks: Math.round(quarter * 0.92),
+        velocity: Math.round((q === 0 ? 100 : q === 2 ? 92 : 84) + (rng() - 0.5) * 8),
+        scaleStep: midiToNearestScaleStep(pitch, tonicPc, scaleIntervals, basePitch),
+      });
+      // Density: occasional skip-8th before beat 1 (the classic "and-of-4" kick).
+      if (q === 3 && rng() < density * 0.5) {
+        const skipPitch = clamp(pitch + (rng() < 0.5 ? 2 : -2), 24, 60);
+        notes.push({
+          pitch: skipPitch,
+          startTicks: b * ticksPerBar + q * quarter + Math.round(quarter * 0.66),
+          durationTicks: Math.round(quarter * 0.3),
+          velocity: 70,
+          scaleStep: midiToNearestScaleStep(skipPitch, tonicPc, scaleIntervals, basePitch),
+        });
+      }
+    }
+  }
+  return { notes, totalBars: bars, ticksPerBar, basePitch, tonicPc, scaleIntervals };
+}
+
+// ----- BERLIN SCHOOL SEQUENCE -----
+// One 16-step pattern repeated exactly — hypnosis through repetition — with
+// tiny mutations every 4 bars. Tangerine Dream / melodic techno DNA.
+function generateBerlin({ tonicMidi, scaleIntervals, bars = 4, chordProgression = [], sliders = {}, seed = null }) {
+  const rng = mulberry32(seed ?? Math.floor(Math.random() * 0xFFFFFFFF));
+  const density = clamp(sliders.density ?? 0.6, 0, 1);
+  const variation = clamp(sliders.variation ?? 0.2, 0, 1);
+  const lengthFactor = clamp(sliders.length ?? 0.25, 0, 1);
+  const registerSlider = clamp(sliders.register ?? 0.4, 0, 1);
+
+  const tonicPc = ((tonicMidi % 12) + 12) % 12;
+  const basePitch = Math.round(36 + registerSlider * 36);
+  const ticksPerBar = STEPS_PER_BAR * TICKS_PER_STEP;
+
+  // Build THE pattern: 16 slots, each a scale-degree or rest.
+  const degreePool = [0, 0, 2, 4, 4, 7, 7, 9, 11];   // root/fifth-heavy
+  const pattern = new Array(STEPS_PER_BAR).fill(null);
+  for (let s = 0; s < STEPS_PER_BAR; s++) {
+    const onProb = s % 4 === 0 ? 0.9 : 0.35 + density * 0.55;
+    if (rng() < onProb) {
+      pattern[s] = degreePool[Math.floor(rng() * degreePool.length)];
+    }
+  }
+  if (!pattern.some(p => p !== null)) pattern[0] = 0;
+
+  const notes = [];
+  for (let b = 0; b < bars; b++) {
+    // Mutate 0–2 steps every 4 bars, scaled by variation. The pattern object
+    // itself mutates — evolution is cumulative, like tweaking a sequencer live.
+    if (b > 0 && b % 4 === 0) {
+      const mutations = Math.round(variation * 2.5);
+      for (let m = 0; m < mutations; m++) {
+        const slot = Math.floor(rng() * STEPS_PER_BAR);
+        pattern[slot] = rng() < 0.2 ? null : degreePool[Math.floor(rng() * degreePool.length)];
+      }
+    }
+    for (let s = 0; s < STEPS_PER_BAR; s++) {
+      if (pattern[s] === null) continue;
+      const scaleStep = pattern[s];
+      const pitch = clamp(scaleStepToMidi(scaleStep, tonicPc, scaleIntervals, basePitch), 0, 127);
+      notes.push({
+        pitch,
+        startTicks: b * ticksPerBar + s * TICKS_PER_STEP,
+        durationTicks: Math.max(40, Math.round(TICKS_PER_STEP * (0.4 + lengthFactor * 0.6))),
+        velocity: s % 4 === 0 ? 102 : 78,
+        scaleStep,
+      });
+    }
+  }
+  return { notes, totalBars: bars, ticksPerBar, basePitch, tonicPc, scaleIntervals };
+}
+
+// ----- 303 ACID SLIDES -----
+// Overlapping notes read as glide on TB-303-style synths; exaggerated accent
+// contrast is the other half of the acid sound.
+function applyAcidSlides(result, slideAmount, rng) {
+  const notes = [...result.notes].sort((a, b) => a.startTicks - b.startTicks);
+  for (let i = 0; i < notes.length - 1; i++) {
+    const cur = notes[i], next = notes[i + 1];
+    const gap = next.startTicks - (cur.startTicks + cur.durationTicks);
+    if (gap <= TICKS_PER_STEP && rng() < slideAmount) {
+      // Slide: extend into the next note so they overlap slightly.
+      cur.durationTicks = next.startTicks - cur.startTicks + Math.round(TICKS_PER_STEP * 0.5);
+    }
+    // Accent contrast: peaks vs valleys.
+    cur.velocity = rng() < 0.3 ? 122 : 68 + Math.round(rng() * 14);
+  }
+  return result;
 }
 
 function velocityForStep(step, style, rng) {

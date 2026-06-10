@@ -13,255 +13,116 @@ const SLIDER_DEFS = [
   { id: 'chromatic',   label: 'Kromatik',    levels: ['Ren', 'Nästan', 'Lite', 'En del', 'Mycket'] },
 ];
 
-// Presets — internal `style` selects rhythm-cell vocabulary; `role` is 'lead' or
-// 'bass' (drives root-anchoring and stepwise-bias). `category` groups them in
-// the dropdown; `tip` is Swedish advice on sound design and BPM.
-const PRESETS = {
-  // ─── BAS ───
-  basgang: {
-    label: 'Basgång',  category: 'Bas',
-    style: 'genesis',  role: 'bass',
-    density: 0.40, variation: 0.15, syncopation: 0.30,
-    length: 0.55, register: 0.05, range: 0.30, chromatic: 0.05,
-    tip: 'Saw-bas med lowpass och kort sustain. Funkar 90–115 BPM. Lägg ackordföljden i samma takt — bassen följer grundtonerna.',
-  },
-  drivingBas: {
-    label: 'Driving bas (Justice)',  category: 'Bas',
-    style: 'genesis',  role: 'bass',
-    density: 0.55, variation: 0.20, syncopation: 0.40,
-    length: 0.45, register: 0.15, range: 0.35, chromatic: 0.10,
-    tip: 'Saw-bas + distortion + lowpass-filter, kort sustain. För Justice "Genesis"-stil: 116–124 BPM och lägg en oktav-stämma upp med samma ljud.',
-  },
-  acidBas: {
-    label: 'Acid bas (303)',  category: 'Bas',
-    style: 'acid',  role: 'bass',
-    density: 0.75, variation: 0.35, syncopation: 0.50,
-    length: 0.30, register: 0.15, range: 0.40, chromatic: 0.20,
-    tip: 'Klassisk TB-303: saw-osc + resonant lowpass + envelope modulation. Automera filter-cutoff och resonance. 125–135 BPM. Höj notlängd för slide.',
-  },
-  hiphopBas: {
-    label: 'Hip-hop bas (half-time)',  category: 'Bas',
-    style: 'pulse',  role: 'bass',
-    density: 0.20, variation: 0.20, syncopation: 0.20,
-    length: 0.85, register: 0.00, range: 0.30, chromatic: 0.00,
-    tip: '808-sub eller ren sinus i bottenregister. Långa sustains, sparsamma noter. 70–90 BPM för half-time. Kombinera med trap/drill-trummor.',
-  },
+// ── Roll × Genre-matris ──────────────────────────────────────────────
+// Varje kombination (roll, genre) löses till ett recept: motor + stil-DNA +
+// slider-defaults + tips. ROLE_BASE ger grundvärden per roll; recepten
+// överskriver bara det som avviker.
 
-  // ─── LEAD ───
-  anthem: {
-    label: 'Anthem-hook',  category: 'Lead',
-    style: 'anthem',  role: 'lead',
-    density: 0.40, variation: 0.30, syncopation: 0.20,
-    length: 0.70, register: 0.55, range: 0.55, chromatic: 0.00,
-    tip: 'Stor saw-lead i unison/stack. Lägg två stämmor (oktav upp + kvint upp diatoniskt). Reverb + ping-pong-delay. Festival/EDM-bredd.',
-  },
-  funkigLead: {
-    label: 'Funkig lead (D.A.N.C.E.)',  category: 'Lead',
-    style: 'dance',  role: 'lead',
-    density: 0.65, variation: 0.50, syncopation: 0.70,
-    length: 0.45, register: 0.55, range: 0.55, chromatic: 0.00,
-    tip: 'Pluck eller filtered-saw med kort decay. D.A.N.C.E.-stil. Lägg en låg-oktav-stämma för dans-groove. 116–124 BPM.',
-  },
-  cosmicDisco: {
-    label: 'Cosmic disco (Todd Terje)',  category: 'Lead',
-    style: 'cosmic',  role: 'lead',
-    density: 0.50, variation: 0.55, syncopation: 0.25,
-    length: 0.75, register: 0.50, range: 0.70, chromatic: 0.05,
-    tip: 'Saw-lead med långt portamento eller sub-saw + chorus. "Inspector Norse"-glide. Lägg oktav-stämma över. 115–125 BPM.',
-  },
-  filterHouse: {
-    label: 'Filter house (Daft Punk)',  category: 'Lead',
-    style: 'filter',  role: 'lead',
-    density: 0.55, variation: 0.20, syncopation: 0.55,
-    length: 0.50, register: 0.45, range: 0.40, chromatic: 0.00,
-    tip: 'Filtered saw loopad i 4 takter. Automera lowpass-cutoff på knob för Daft Punk "Da Funk"-vibe. 120–128 BPM. Lägg oktav-stämma upp.',
-  },
+const ROLES = [
+  { id: 'bass',   label: 'Bas' },
+  { id: 'lead',   label: 'Lead' },
+  { id: 'melody', label: 'Melodi' },
+  { id: 'chord',  label: 'Ackord' },
+  { id: 'arp',    label: 'Arp' },
+  { id: 'drums',  label: 'Trummor' },
+];
 
-  // ─── ARP ───
-  italoArp: {
-    label: 'Italo arp (Synthwave)',  category: 'Arp',
-    style: 'italo',  role: 'lead',
-    density: 0.80, variation: 0.30, syncopation: 0.40,
-    length: 0.30, register: 0.50, range: 0.65, chromatic: 0.05,
-    tip: 'Bright saw med kort decay + dotted 1/16 delay för synthwave/"Drive"-vibe. 110–120 BPM. Oktav-stämma över lyfter arp-en.',
-  },
-  kromatiskArp: {
-    label: 'Kromatisk arp (Phantom)',  category: 'Arp',
-    style: 'phantom',  role: 'lead',
-    density: 0.85, variation: 0.55, syncopation: 0.45,
-    length: 0.30, register: 0.55, range: 0.70, chromatic: 0.40,
-    tip: 'Heavy saw + medium distortion. Justice-stil. Lägg två stämmor (oktav upp + kvint upp diatoniskt). 124–132 BPM.',
-  },
-  pulserande: {
-    label: 'Pulserande arp',  category: 'Arp',
-    style: 'pulse',  role: 'lead',
-    density: 0.25, variation: 0.10, syncopation: 0.15,
-    length: 0.35, register: 0.25, range: 0.25, chromatic: 0.00,
-    tip: 'Pluck-synth, bell eller marimba. Hypnotisk single-noter. Bra som intro/outro eller hookigt motiv.',
-  },
+const GENRES = [
+  { id: 'french',  label: 'French house' },
+  { id: 'disco',   label: 'Disco' },
+  { id: 'rock',    label: 'Rock' },
+  { id: 'reggae',  label: 'Reggae' },
+  { id: 'latin',   label: 'Latin' },
+  { id: 'baroque', label: 'Barock' },
+  { id: 'jazz',    label: 'Jazz/Soul' },
+  { id: 'synth',   label: 'Synth/Trance' },
+  { id: 'lofi',    label: 'Lo-fi' },
+  { id: 'minimal', label: 'Minimal' },
+];
 
-  // ─── MELODI ───
+const ROLE_BASE = {
+  bass:   { density: 0.50, variation: 0.20, syncopation: 0.35, length: 0.50, register: 0.10, range: 0.30, chromatic: 0.05 },
+  lead:   { density: 0.60, variation: 0.40, syncopation: 0.40, length: 0.45, register: 0.55, range: 0.50, chromatic: 0.05 },
+  melody: { density: 0.25, variation: 0.60, syncopation: 0.15, length: 0.85, register: 0.60, range: 0.45, chromatic: 0.00 },
+  chord:  { density: 0.45, variation: 0.30, syncopation: 0.50, length: 0.30, register: 0.55, range: 0.35, chromatic: 0.00 },
+  arp:    { density: 0.70, variation: 0.20, syncopation: 0.10, length: 0.30, register: 0.55, range: 0.50, chromatic: 0.00 },
+  drums:  { density: 0.50, variation: 0.35, syncopation: 0.25, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00 },
+};
+
+// engine: 'riff' (Markov+mallar), 'vocal' (riff med sångbarhets-bias),
+// 'arp' (deterministisk arpeggiator), 'walking', 'berlin', 'drums'.
+const RECIPES = {
+  bass: {
+    french:  { engine: 'riff', style: 'genesis', tip: 'Justice-bas: distad saw, kort sustain, lowpass. 110–125 BPM.' },
+    disco:   { engine: 'arp', pattern: 'octave', sliders: { density: 0.30, register: 0.05, length: 0.45 }, tip: 'Oktav-studs à la Chic / "Around the World". Fingerbas eller synthbas med pluck. 110–122 BPM.' },
+    rock:    { engine: 'riff', style: 'rock', sliders: { register: 0.15, length: 0.40 }, tip: 'Pentatonisk power-bas — dubbla gärna gitarrens riff. 90–140 BPM.' },
+    reggae:  { engine: 'riff', style: 'reggae', sliders: { density: 0.35, syncopation: 0.50, length: 0.60, register: 0.05 }, tip: 'Dub-bas: rund, dämpad diskant, pauserna bär grooven. 70–90 BPM.' },
+    latin:   { engine: 'riff', style: 'latin', sliders: { syncopation: 0.60 }, tip: 'Tumbao-känsla — synkoperad rot/kvint. Para med Latin-trummor. 90–110 BPM.' },
+    baroque: { engine: 'riff', style: 'baroque', sliders: { length: 0.55, density: 0.45 }, tip: 'Continuo: vandrande basstämma, cello eller orgelpedal. Fungerar fint under en fuga-lead.' },
+    jazz:    { engine: 'walking', sliders: { density: 0.40 }, tip: 'Walking bass: rot på 1:an, kromatisk approach in i varje nytt ackord. Swinga 8:orna i din DAW. Kontrabas/fingerbas.' },
+    synth:   { engine: 'riff', style: 'acid', acid: true, sliders: { density: 0.65, length: 0.35 }, tip: '303-acid: överlappande noter = glide på TB-303-synthar (sätt mono+glide). Accenterna gör resten. 125–140 BPM.' },
+    lofi:    { engine: 'riff', style: 'pulse', sliders: { density: 0.25, length: 0.70 }, tip: 'Half-time sub-bas, få toner, låt den gunga. Sinus eller mjuk saw. 70–90 BPM.' },
+    minimal: { engine: 'riff', style: 'pulse', sliders: { density: 0.30, variation: 0.10 }, tip: 'Pulserande rot-bas — hypnotisk repetition. Sidechain mot kicken. 120–130 BPM.' },
+  },
+  lead: {
+    french:  { engine: 'riff', style: 'dance', tip: 'Funkig filtered lead à la D.A.N.C.E. Phaser + lowpass-automation. 110–125 BPM.' },
+    disco:   { engine: 'riff', style: 'cosmic', sliders: { variation: 0.45 }, tip: 'Cosmic disco-lead à la Todd Terje — arpeggio-aktig, lekfull. Analog poly-synth. 105–120 BPM.' },
+    rock:    { engine: 'riff', style: 'rock', sliders: { register: 0.35, chromatic: 0.05 }, tip: 'Pentatoniskt gitarriff. Mollpentatonisk skala rekommenderas. Lägg stämma "Oktav ned" för power.' },
+    reggae:  { engine: 'riff', style: 'reggae', sliders: { density: 0.35, syncopation: 0.60 }, tip: 'Melodica/orgel-lead med luft — tänk Augustus Pablo. 70–90 BPM.' },
+    latin:   { engine: 'riff', style: 'latin', sliders: { density: 0.65, syncopation: 0.60, length: 0.35 }, tip: 'Montuno-piano: synkoperat arpeggio-mönster. Dubbla i oktaver (stämma "Oktav upp", samtidig). 90–110 BPM.' },
+    baroque: { engine: 'riff', style: 'baroque', sliders: { density: 0.55, length: 0.70, chromatic: 0.15 }, tip: 'Fuga-subjekt: lägg "Kvint upp diatoniskt / 1 takt senare" + "Oktav upp / 2 takter senare" för exposition. Orgel/cembalo.' },
+    jazz:    { engine: 'riff', style: 'dance', sliders: { chromatic: 0.30, syncopation: 0.55, length: 0.40 }, tip: 'Bluesig lead — testa blues- eller dorisk skala. Rhodes eller gitarr. Swinga 8:orna.' },
+    synth:   { engine: 'riff', style: 'phantom', sliders: { density: 0.85, length: 0.30, chromatic: 0.40 }, tip: 'Snabb kromatisk synth-lead à la Justice "Phantom". Hård saw + unison. 120–130 BPM.' },
+    lofi:    { engine: 'riff', style: 'ambient', sliders: { density: 0.30, length: 0.70, variation: 0.45 }, tip: 'Mjuk lead över lo-fi-komp — Rhodes/gitarr med tape-vibb. 70–85 BPM.' },
+    minimal: { engine: 'berlin', sliders: { density: 0.60, variation: 0.25, length: 0.25, register: 0.45 }, tip: 'Berlin school-sekvens: exakt repetition med små mutationer var 4:e takt. Analog mono-synth + delay. Tangerine Dream / melodisk techno.' },
+  },
   melody: {
-    label: 'Sångmelodi',  category: 'Melodi',
-    style: 'anthem',  role: 'lead',
-    density: 0.22, variation: 0.65, syncopation: 0.10,
-    length: 0.90, register: 0.65, range: 0.50, chromatic: 0.00,
-    tip: 'Pad, strings eller mjuk lead med lång attack. Lågt vibrato. Lägg en stämma en oktav under för fyllighet. Bra som verse-melodi.',
+    french:  { engine: 'vocal', style: 'anthem', tip: 'Sångbar hook över house-komp. Stegvis rörelse, gap-fill efter språng. Skriv text på den!' },
+    disco:   { engine: 'vocal', style: 'anthem', sliders: { syncopation: 0.30 }, tip: 'Disco-refräng — sjungbar, lite synkop. Strings unisont gör den episk. 110–122 BPM.' },
+    rock:    { engine: 'vocal', style: 'rock', sliders: { density: 0.30 }, tip: 'Rocksång — pentatonisk, råare. Testa mollpentatonisk skala.' },
+    reggae:  { engine: 'vocal', style: 'reggae', sliders: { syncopation: 0.40 }, tip: 'Laidback vokalmelodi med off-beat-frasering. 70–90 BPM.' },
+    latin:   { engine: 'vocal', style: 'latin', sliders: { density: 0.35, syncopation: 0.45 }, tip: 'Son/salsa-melodi — synkoperad men sångbar. Clave i ryggen.' },
+    baroque: { engine: 'vocal', style: 'baroque', sliders: { density: 0.35, length: 0.90 }, tip: 'Aria-linje: stegvis, lång frasering. Vacker på stråk eller oboe-patch.' },
+    jazz:    { engine: 'vocal', style: 'anthem', sliders: { chromatic: 0.15, syncopation: 0.35 }, tip: 'Standards-melodi med kromatiska färgtoner. Swinga frasering i DAW:n.' },
+    synth:   { engine: 'vocal', style: 'italo', sliders: { density: 0.30, length: 0.75 }, tip: 'Synthpop-topline à la 80-tal — sångbar över italo-arp. 110–125 BPM.' },
+    lofi:    { engine: 'vocal', style: 'ambient', sliders: { density: 0.18, length: 0.95 }, tip: 'Drömsk, gles melodi — få toner, mycket rymd. Mjuk sinus-lead eller humming.' },
+    minimal: { engine: 'vocal', style: 'pulse', sliders: { density: 0.20, variation: 0.30 }, tip: 'Minimal hook — två-tre toner som etsar sig fast. Mindre är mer.' },
   },
-  topline: {
-    label: 'Topline (vocal-hook)',  category: 'Melodi',
-    style: 'topline',  role: 'lead',
-    density: 0.30, variation: 0.40, syncopation: 0.15,
-    length: 0.80, register: 0.75, range: 0.40, chromatic: 0.00,
-    tip: 'Sjungbar lead i högre register. Använd som vocal-replacement över dropp eller refräng. Pluck, klocka eller bright lead.',
+  chord: {
+    french:  { engine: 'riff', style: 'filter', voicing: 'wide', extensions: 'seven', tip: 'House-piano: m7-stabs, sidechain mot kick. Daft Punk-skolan. 118–126 BPM.' },
+    disco:   { engine: 'riff', style: 'dance', voicing: 'spread', extensions: 'seven', sliders: { syncopation: 0.50 }, tip: 'Disco-stabs: 7:or på off-beats. Strings eller clavinet. 110–122 BPM.' },
+    rock:    { engine: 'riff', style: 'rock', voicing: 'compact', extensions: 'none', sliders: { length: 0.30, syncopation: 0.25 }, tip: 'Power-stabs — råa treklanger. Distad gitarr eller orgel.' },
+    reggae:  { engine: 'riff', style: 'reggae', voicing: 'compact', extensions: 'none', sliders: { density: 0.25, syncopation: 0.90, length: 0.15, register: 0.60 }, tip: 'Skank: torra stabs på off-beats. Gitarr/orgel, kort och tight. Para med Reggae-bas. 70–90 BPM.' },
+    latin:   { engine: 'riff', style: 'latin', voicing: 'compact', extensions: 'seven', sliders: { syncopation: 0.60 }, tip: 'Montuno-komp med 7:or, synkoperat mot clave. Piano. 90–110 BPM.' },
+    baroque: { engine: 'riff', style: 'baroque', voicing: 'compact', extensions: 'none', sliders: { length: 0.50, syncopation: 0.15 }, tip: 'Cembalo-block — continuo-realisering. Funkar även på pluck-synth.' },
+    jazz:    { engine: 'riff', style: 'anthem', voicing: 'wide', extensions: 'thirteenth', sliders: { density: 0.30, length: 0.70, variation: 0.50 }, tip: 'Neo-soul: m13/maj13 utspritt över två oktaver. Rhodes med chorus. D\'Angelo/Glasper. 75–95 BPM.' },
+    synth:   { engine: 'riff', style: 'filter', voicing: 'spread', extensions: 'sus4', sliders: { density: 0.75, length: 0.12 }, tip: 'Trance gate: täta sus4-stabs, kör genom gate/sidechain. Supersaw. 132–142 BPM.' },
+    lofi:    { engine: 'riff', style: 'ambient', voicing: 'compact', extensions: 'ninth', sliders: { density: 0.18, length: 0.85 }, tip: 'Lo-fi keys: m9 i långsamt tempo, tape-wobble + vinylknaster. 70–85 BPM.' },
+    minimal: { engine: 'riff', style: 'pulse', voicing: 'compact', extensions: 'sus2', sliders: { density: 0.25, length: 0.50 }, tip: 'Glesa sus2-stabs — öppet, svävande. Mycket reverb, mycket tålamod.' },
   },
-  ambient: {
-    label: 'Ambient pad-melodi',  category: 'Melodi',
-    style: 'ambient',  role: 'lead',
-    density: 0.10, variation: 0.45, syncopation: 0.05,
-    length: 1.00, register: 0.50, range: 0.40, chromatic: 0.00,
-    tip: 'Mellotron, Rhodes eller breath-pad med långt attack och mycket reverb. Funkar som långsam evolverande melodi över en pad-bädd.',
+  arp: {
+    french:  { engine: 'arp', pattern: 'updown', sliders: { density: 0.60 }, tip: 'Upp-och-ner-arp i 16-delar. Filtersvep + sidechain. 118–126 BPM.' },
+    disco:   { engine: 'arp', pattern: 'up', sliders: { density: 0.30, length: 0.45 }, tip: 'Stigande 8-dels-arp — strings eller analog synth. Giorgio Moroder-skolan. 110–122 BPM.' },
+    rock:    { engine: 'arp', pattern: 'up', sliders: { density: 0.30, register: 0.35, range: 0.30, length: 0.60 }, tip: 'Brutna ackord på gitarr — fingerspel/clean. Ballad-läge.' },
+    reggae:  { engine: 'arp', pattern: 'up', sliders: { density: 0.30, syncopation: 0.70 }, tip: 'Off-beat-arp: spelar bara på off-beats, som en arpeggierad skank.' },
+    latin:   { engine: 'arp', pattern: 'updown', sliders: { density: 0.60, syncopation: 0.30 }, tip: 'Montuno-arp i 16-delar — piano eller marimba. 90–110 BPM.' },
+    baroque: { engine: 'arp', pattern: 'alberti', sliders: { density: 0.60, length: 0.50 }, tip: 'Alberti-bas / brutna ackord à la Bach-preludium. Cembalo, piano eller pluck. Tidlös.' },
+    jazz:    { engine: 'arp', pattern: 'updown', sliders: { density: 0.30, length: 0.55 }, tip: 'Brutna ackord i 8-delar — komp bakom melodi. Lägg 7:or via ackordföljden (Am7, Dm7...).' },
+    synth:   { engine: 'arp', pattern: 'up', sliders: { density: 0.80, range: 0.70, length: 0.20 }, tip: 'Trance-arp: 16-delar över 2 oktaver. Supersaw + 3/16-delay + sidechain. 132–142 BPM.' },
+    lofi:    { engine: 'arp', pattern: 'down', sliders: { density: 0.30, length: 0.70, variation: 0.30 }, tip: 'Fallande, mjuk arp — harpa/kalimba-känsla över lo-fi-beat.' },
+    minimal: { engine: 'arp', pattern: 'octave', sliders: { density: 0.60, register: 0.45 }, tip: 'Oktav-puls i mellanregister — hypnotisk motor. Plucky mono-synth. 120–130 BPM.' },
   },
-
-  // ─── ACKORD-RIFF (rytmiska stabs — clav, wurli, piano) ───
-  clavRiff: {
-    label: 'Clav-riff (funky)',  category: 'Ackord-riff',
-    style: 'dance',  role: 'chord',  voicing: 'compact',  extensions: 'ninth',
-    density: 0.60, variation: 0.30, syncopation: 0.65,
-    length: 0.25, register: 0.55, range: 0.30, chromatic: 0.00,
-    tip: 'Clavinet (Hohner D6) eller plucked clav-synth, kort decay, EQ-boost 1–2 kHz. Default: m9/9-ackord (Stevie "Superstition"-flavor). 100–115 BPM. Lägg en ackordföljd som i / VII / VI / VII.',
-  },
-  wurliStab: {
-    label: 'Wurlitzer stab',  category: 'Ackord-riff',
-    style: 'anthem',  role: 'chord',  voicing: 'spread',  extensions: 'seven',
-    density: 0.35, variation: 0.25, syncopation: 0.45,
-    length: 0.55, register: 0.55, range: 0.40, chromatic: 0.00,
-    tip: 'Wurlitzer 200A eller Rhodes med tremolo, lätt overdrive och plate-reverb. Default: m7/maj7-ackord — Steely Dan / soul. 90–110 BPM. Off-beat-stabs.',
-  },
-  pianoStab: {
-    label: 'Piano-stab (house)',  category: 'Ackord-riff',
-    style: 'filter',  role: 'chord',  voicing: 'wide',  extensions: 'seven',
-    density: 0.45, variation: 0.30, syncopation: 0.60,
-    length: 0.20, register: 0.60, range: 0.35, chromatic: 0.00,
-    tip: 'Akustisk piano eller FM-piano (DX7 E.PIANO 1). Default: m7-ackord (klassisk fransk house). Sidechain mot kick. 118–126 BPM. Daft Punk-feel.',
-  },
-  neoSoul: {
-    label: 'Neo-soul keys (D’Angelo)',  category: 'Ackord-riff',
-    style: 'anthem',  role: 'chord',  voicing: 'wide',  extensions: 'thirteenth',
-    density: 0.30, variation: 0.50, syncopation: 0.55,
-    length: 0.70, register: 0.55, range: 0.45, chromatic: 0.00,
-    tip: 'Rhodes Mark V eller akustisk piano med chorus och vintage-comp. Default: m13/maj13-ackord (full jazz-färgning). 75–95 BPM. D’Angelo / Robert Glasper / neo-soul.',
-  },
-  sus4Stab: {
-    label: 'Sus-stab (modern pop)',  category: 'Ackord-riff',
-    style: 'filter',  role: 'chord',  voicing: 'spread',  extensions: 'sus4',
-    density: 0.40, variation: 0.30, syncopation: 0.40,
-    length: 0.40, register: 0.55, range: 0.35, chromatic: 0.00,
-    tip: 'Bright pluck eller pad. Default: sus4-ackord — öppen, ambivalent. Funkar som "spänning före upplösning" innan en chorus. Modern pop / electropop. 100–125 BPM.',
-  },
-
-  // ─── POLYFONI (kanonisk imitation, fuga) ───
-  heavyMetal: {
-    label: 'Heavy metal (Justice / barock)',  category: 'Polyfoni',
-    style: 'baroque',  role: 'bass',
-    density: 0.55, variation: 0.20, syncopation: 0.20,
-    length: 0.55, register: 0.18, range: 0.45, chromatic: 0.10,
-    tip: 'Distad saw-bas i mid-low register, tonart moll/harmonisk-moll/frygisk. Lägg två stämmor: ① "Oktav upp" med "1 takt senare", ② "Kvint upp (diatonisk)" med "2 takter senare". Ger Justice "Heavy Metal"-effekt. 110–125 BPM, gärna 8 takter.',
-  },
-  fuga: {
-    label: 'Bach-fuga',  category: 'Polyfoni',
-    style: 'baroque',  role: 'lead',
-    density: 0.55, variation: 0.25, syncopation: 0.15,
-    length: 0.70, register: 0.40, range: 0.55, chromatic: 0.15,
-    tip: 'Spela på orgel, cembalo eller pluck. Tonart: moll, dorisk eller frygisk. Lägg "Kvint upp diatoniskt" med "1 takt senare" (dux/comes — fugans dominant-svar) och ev. "Oktav upp" med "2 takter senare" för en tredje röst. Använd minst 4 takter.',
-  },
-
-  // ─── NYA GENRER (bortom dans) ───
-  rockRiff: {
-    label: 'Rock-riff (pentatonisk)',  category: 'Lead',
-    style: 'rock',  role: 'lead',
-    density: 0.50, variation: 0.25, syncopation: 0.25,
-    length: 0.40, register: 0.30, range: 0.35, chromatic: 0.05,
-    tip: 'Distad gitarr eller tjock unison-synth. Mollpentatonisk skala rekommenderas starkt. 90–140 BPM. Lägg gärna en stämma "Oktav ned" för power-känsla.',
-  },
-  reggaeBass: {
-    label: 'Reggae-bas (dub)',  category: 'Bas',
-    style: 'reggae',  role: 'bass',
-    density: 0.35, variation: 0.20, syncopation: 0.50,
-    length: 0.60, register: 0.05, range: 0.30, chromatic: 0.00,
-    tip: 'Rund fingerbas eller subby synth-bas, dämpad diskant, gärna lite dub-delay på annat. 70–90 BPM. Luftig — pauserna är lika viktiga som tonerna.',
-  },
-  reggaeSkank: {
-    label: 'Reggae skank',  category: 'Ackord-riff',
-    style: 'reggae',  role: 'chord',  voicing: 'compact',  extensions: 'none',
-    density: 0.25, variation: 0.15, syncopation: 0.90,
-    length: 0.15, register: 0.60, range: 0.30, chromatic: 0.00,
-    tip: 'Gitarr-skank eller orgel-stab på off-beats (2 och 4 i 8-delar). Kort och torrt — staccato är hela poängen. 70–90 BPM. Funkar perfekt ihop med Reggae-bas.',
-  },
-  montuno: {
-    label: 'Latin montuno (piano)',  category: 'Melodi',
-    style: 'latin',  role: 'lead',
-    density: 0.65, variation: 0.30, syncopation: 0.60,
-    length: 0.35, register: 0.60, range: 0.50, chromatic: 0.00,
-    tip: 'Akustiskt piano, gärna dubblat i oktaver (lägg stämma "Oktav upp", samtidig). Synkoperat arpeggio-mönster à la salsa/son. 90–110 BPM. Para med Latin percussion-trummorna.',
-  },
-  tranceArp: {
-    label: 'Trance-arp',  category: 'Arp',
-    style: 'italo',  role: 'lead',
-    density: 0.90, variation: 0.15, syncopation: 0.10,
-    length: 0.15, register: 0.65, range: 0.55, chromatic: 0.00,
-    tip: 'Supersaw med delay (3/16 ping-pong) och sidechain mot kicken. 16-delar rakt igenom. 132–142 BPM. Lägg stämma "Oktav upp" med "¼ takt senare" för klassisk trance-kaskad.',
-  },
-  lofiKeys: {
-    label: 'Lo-fi keys',  category: 'Ackord-riff',
-    style: 'ambient',  role: 'chord',  voicing: 'compact',  extensions: 'ninth',
-    density: 0.18, variation: 0.40, syncopation: 0.20,
-    length: 0.85, register: 0.50, range: 0.35, chromatic: 0.00,
-    tip: 'Rhodes eller piano genom tape-emulering (wow/flutter), lågpass runt 6 kHz, vinyl-knaster. m9-ackord i långsamt tempo, 70–85 BPM. Lo-fi hip-hop / study beats.',
-  },
-
-  // ─── TRUMMOR (GM kanal 10) ───
-  drumsHouse: {
-    label: 'House 4x4',  category: 'Trummor',
-    role: 'drums',  drumStyle: 'house',
-    density: 0.50, variation: 0.30, syncopation: 0.20,
-    length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00,
-    tip: 'Klassisk house: kick på varje fjärdedel, clap på 2 & 4, off-beat hats. 120–128 BPM. Exportera och dra in på ett GM-trumspår eller mappa om till din sampler.',
-  },
-  drumsTechno: {
-    label: 'Techno (minimal)',  category: 'Trummor',
-    role: 'drums',  drumStyle: 'techno',
-    density: 0.55, variation: 0.20, syncopation: 0.30,
-    length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00,
-    tip: 'Maskinell 16-dels-hihat, hård kick, sparsamma rimshots. 125–135 BPM. Höj Densitet för tätare hi-hats, Variation för mer rörelse.',
-  },
-  drumsDisco: {
-    label: 'Disco',  category: 'Trummor',
-    role: 'drums',  drumStyle: 'disco',
-    density: 0.55, variation: 0.30, syncopation: 0.15,
-    length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00,
-    tip: 'Four-on-the-floor med öppen hi-hat på varje off-beat ("pea soup") och tamburin. 110–122 BPM. Para med Cosmic disco-basen!',
-  },
-  drumsRock: {
-    label: 'Rock-komp',  category: 'Trummor',
-    role: 'drums',  drumStyle: 'rock',
-    density: 0.45, variation: 0.40, syncopation: 0.15,
-    length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00,
-    tip: 'Rakt rock-komp: kick 1 & 3, virvel 2 & 4, 8-dels-hats, crash på fraser. 90–140 BPM. Höj Variation för fler tom-fills.',
-  },
-  drumsFunk: {
-    label: 'Funk breakbeat',  category: 'Trummor',
-    role: 'drums',  drumStyle: 'funkbreak',
-    density: 0.60, variation: 0.45, syncopation: 0.50,
-    length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00,
-    tip: 'Synkoperad kick, ghost notes på virveln, 16-dels-hats à la Funky Drummer. 95–110 BPM. Densitet styr ghost-tätheten.',
-  },
-  drumsLatin: {
-    label: 'Latin percussion',  category: 'Trummor',
-    role: 'drums',  drumStyle: 'latin',
-    density: 0.60, variation: 0.30, syncopation: 0.40,
-    length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00,
-    tip: '3-2 son-clave, congas, cowbell på fjärdedelar, shaker-16-delar. 90–115 BPM. Lägg ovanpå valfritt komp — eller para med Latin montuno.',
+  drums: {
+    french:  { engine: 'drums', drumStyle: 'house', tip: 'House: kick 4x4, clap på 2 & 4, off-beat hats. 120–128 BPM.' },
+    disco:   { engine: 'drums', drumStyle: 'disco', tip: 'Disco: open hat på varje off-beat ("pea soup") + tamburin. 110–122 BPM.' },
+    rock:    { engine: 'drums', drumStyle: 'rock', sliders: { variation: 0.40 }, tip: 'Rakt rock-komp: kick 1 & 3, virvel 2 & 4. Höj Variation för fler fills.' },
+    reggae:  { engine: 'drums', drumStyle: 'onedrop', tip: 'One drop: tyngdpunkten på 3:an (kick + rim ihop), luft på 1:an. 70–90 BPM.' },
+    latin:   { engine: 'drums', drumStyle: 'latin', sliders: { density: 0.60, syncopation: 0.40 }, tip: '3-2 son-clave, congas, cowbell. Lägg ovanpå valfritt komp. 90–115 BPM.' },
+    baroque: { engine: 'drums', drumStyle: 'rock', sliders: { density: 0.35, variation: 0.50 }, tip: 'Barock har inga trummor — det här är ett anakronistiskt rock-komp. Kör tom-fills som pukor, eller skippa.' },
+    jazz:    { engine: 'drums', drumStyle: 'funkbreak', sliders: { density: 0.55, variation: 0.45 }, tip: 'Ghost notes + synkop — närmast swing appen kommer. Swinga 8:orna i DAW:n och lägg ride ovanpå.' },
+    synth:   { engine: 'drums', drumStyle: 'techno', sliders: { density: 0.55, syncopation: 0.30 }, tip: 'Maskinell 16-dels-hihat, hård kick. 125–140 BPM.' },
+    lofi:    { engine: 'drums', drumStyle: 'lofi', tip: 'Lat boom bap: sloppy kick, avslappnad virvel. Lägg swing + vinylknaster. 70–90 BPM.' },
+    minimal: { engine: 'drums', drumStyle: 'techno', sliders: { density: 0.35, variation: 0.15 }, tip: 'Avskalad techno — få element, mycket repetition. 122–132 BPM.' },
   },
 };
 
@@ -291,12 +152,15 @@ const VOICE_DELAYS = [
 ];
 
 const STATE = {
-  style: 'genesis',
-  role: 'lead',
+  role: 'bass',          // UI-roll: bass | lead | melody | chord | arp | drums
+  genre: 'french',
+  engine: 'riff',        // riff | vocal | arp | walking | berlin | drums
+  style: 'genesis',      // corpus-DNA för riff/vocal-motorerna
+  pattern: 'up',         // arp-mönster
+  acid: false,           // 303-slides på/av
   voicing: 'compact',
   extensions: 'none',
   drumStyle: null,
-  presetKey: 'basgang',
   sliders: {},
   voices: [],
   currentResult: null,
@@ -321,10 +185,10 @@ let playStarting = false;  // guard against rapid double-clicks on Play
 // ---------- INIT ----------
 document.addEventListener('DOMContentLoaded', () => {
   buildSliders();
-  bindPresets();
+  bindChips();
   bindVoiceUI();
   bindActions();
-  applyPreset('basgang');
+  applyCombo('bass', 'french', { audition: false });
   generate();
 });
 
@@ -361,27 +225,24 @@ function refreshSliderUI() {
   }
 }
 
-// Category order in the dropdown — must include every value used in PRESETS.
-const CATEGORY_ORDER = ['Bas', 'Lead', 'Arp', 'Ackord-riff', 'Melodi', 'Polyfoni', 'Trummor'];
+// ---------- ROLL × GENRE CHIPS ----------
+function bindChips() {
+  const roleRow = document.getElementById('role-chips');
+  const genreRow = document.getElementById('genre-chips');
+  roleRow.innerHTML = ROLES.map(r =>
+    `<button type="button" class="chip" data-role="${r.id}">${r.label}</button>`).join('');
+  genreRow.innerHTML = GENRES.map(g =>
+    `<button type="button" class="chip" data-genre="${g.id}">${g.label}</button>`).join('');
 
-function bindPresets() {
-  const select = document.getElementById('preset-select');
-  select.innerHTML = '';
-  for (const cat of CATEGORY_ORDER) {
-    const group = document.createElement('optgroup');
-    group.label = cat;
-    for (const [key, preset] of Object.entries(PRESETS)) {
-      if (preset.category !== cat) continue;
-      const opt = document.createElement('option');
-      opt.value = key;
-      opt.textContent = preset.label;
-      group.appendChild(opt);
-    }
-    select.appendChild(group);
-  }
-  select.addEventListener('change', e => applyPreset(e.target.value));
+  roleRow.addEventListener('click', e => {
+    const btn = e.target.closest('.chip');
+    if (btn) applyCombo(btn.dataset.role, STATE.genre, { audition: true });
+  });
+  genreRow.addEventListener('click', e => {
+    const btn = e.target.closest('.chip');
+    if (btn) applyCombo(STATE.role, btn.dataset.genre, { audition: true });
+  });
 
-  // Populate the extensions dropdown (visible only when role === 'chord').
   const extSel = document.getElementById('extensions-select');
   if (extSel) {
     extSel.innerHTML = EXTENSION_OPTIONS
@@ -391,23 +252,48 @@ function bindPresets() {
   }
 }
 
-function applyPreset(name) {
-  const preset = PRESETS[name];
-  if (!preset) return;
-  STATE.style = preset.style ?? STATE.style;
-  STATE.role = preset.role ?? 'lead';
-  STATE.voicing = preset.voicing ?? 'compact';
-  STATE.extensions = preset.extensions ?? 'none';
-  STATE.drumStyle = preset.drumStyle ?? null;
-  STATE.presetKey = name;
-  for (const def of SLIDER_DEFS) STATE.sliders[def.id] = preset[def.id];
-  const select = document.getElementById('preset-select');
-  if (select) select.value = name;
+// Resolve (role, genre) → recipe, apply it, and optionally audition directly.
+function applyCombo(roleId, genreId, { audition = false } = {}) {
+  const recipe = RECIPES[roleId]?.[genreId];
+  if (!recipe) return;
+
+  STATE.role = roleId;
+  STATE.genre = genreId;
+  STATE.engine = recipe.engine;
+  STATE.style = recipe.style ?? STATE.style;
+  STATE.pattern = recipe.pattern ?? 'up';
+  STATE.acid = !!recipe.acid;
+  STATE.voicing = recipe.voicing ?? 'compact';
+  STATE.extensions = recipe.extensions ?? 'none';
+  STATE.drumStyle = recipe.drumStyle ?? null;
+
+  const base = ROLE_BASE[roleId];
+  for (const def of SLIDER_DEFS) {
+    STATE.sliders[def.id] = recipe.sliders?.[def.id] ?? base[def.id];
+  }
+
+  document.querySelectorAll('#role-chips .chip').forEach(b =>
+    b.classList.toggle('active', b.dataset.role === roleId));
+  document.querySelectorAll('#genre-chips .chip').forEach(b =>
+    b.classList.toggle('active', b.dataset.genre === genreId));
+
   const tipEl = document.getElementById('preset-tip');
-  if (tipEl) tipEl.textContent = preset.tip ?? '';
+  if (tipEl) tipEl.textContent = recipe.tip ?? '';
+
   refreshExtensionsUI();
   refreshPanelVisibility();
   refreshSliderUI();
+
+  if (audition) {
+    generate();
+    play();   // chip-klicket är en user-gesture, så ljudet får starta
+  }
+}
+
+function comboLabel() {
+  const r = ROLES.find(x => x.id === STATE.role)?.label ?? STATE.role;
+  const g = GENRES.find(x => x.id === STATE.genre)?.label ?? STATE.genre;
+  return `${g} · ${r}`;
 }
 
 // Layout-säkring: hide controls that don't apply to the current role so the UI
@@ -533,18 +419,16 @@ function randomize() {
   const scales = ['minor', 'minor', 'minor', 'phrygian', 'dorian', 'harmonic-minor', 'minor-pent', 'blues'];
   document.getElementById('scale').value = scales[Math.floor(Math.random() * scales.length)];
 
-  // Random preset, then nudge each slider
-  const presetKeys = Object.keys(PRESETS);
-  const presetName = presetKeys[Math.floor(Math.random() * presetKeys.length)];
-  applyPreset(presetName);
+  // Random combo, then nudge sliders (snapped to quarter steps for the UI).
+  const role = ROLES[Math.floor(Math.random() * ROLES.length)].id;
+  const genre = GENRES[Math.floor(Math.random() * GENRES.length)].id;
+  applyCombo(role, genre, { audition: false });
   for (const def of SLIDER_DEFS) {
     const nudge = (Math.random() - 0.5) * 0.3;
-    // Snap to quarter steps so the segmented UI always shows the exact state.
     STATE.sliders[def.id] = Math.round(Math.max(0, Math.min(1, STATE.sliders[def.id] + nudge)) * 4) / 4;
   }
   refreshSliderUI();
 
-  // Random bars (4 or 8 mostly)
   const bars = [4, 4, 4, 8, 8, 2][Math.floor(Math.random() * 6)];
   document.getElementById('bars').value = bars;
 
@@ -572,7 +456,7 @@ function generate() {
   const seed = Math.floor(Math.random() * 0xFFFFFFFF);
   STATE.currentSeed = seed;
 
-  if (STATE.role === 'drums') {
+  if (STATE.engine === 'drums') {
     const result = generateDrums({
       drumStyle: STATE.drumStyle,
       bars: ui.bars,
@@ -580,26 +464,47 @@ function generate() {
       seed,
     });
     STATE.currentResult = { main: result, voices: [], bars: ui.bars, bpm: ui.bpm, isDrums: true };
-    const label = PRESETS[STATE.presetKey]?.label ?? 'Trummor';
     document.getElementById('seed-display').textContent =
-      `seed: ${seed.toString(16).padStart(8, '0')}   ·   ${ui.bars} takter @ ${ui.bpm} bpm   ·   ${label}`;
+      `seed: ${seed.toString(16).padStart(8, '0')}   ·   ${ui.bars} takter @ ${ui.bpm} bpm   ·   ${comboLabel()}`;
     renderPianoRoll();
     return;
   }
 
-  const result = generateRiff({
+  // Dispatch to the right engine. All engines return the same result shape,
+  // so harmony voices, the piano roll and MIDI export work on every one.
+  const common = {
     tonicMidi: ui.tonicMidi,
     scaleIntervals: ui.scaleIntervals,
     bars: ui.bars,
-    bpm: ui.bpm,
-    style: STATE.style,
-    role: STATE.role,
-    voicing: STATE.voicing,
-    extensions: STATE.extensions,
     chordProgression: ui.chordProgression,
     sliders: STATE.sliders,
     seed,
-  });
+  };
+  let result;
+  if (STATE.engine === 'arp') {
+    result = generateArp({ ...common, pattern: STATE.pattern });
+  } else if (STATE.engine === 'walking') {
+    result = generateWalkingBass(common);
+  } else if (STATE.engine === 'berlin') {
+    result = generateBerlin(common);
+  } else {
+    // 'riff' & 'vocal' — Markov-based engine; vocal adds singability bias.
+    const genRole = STATE.engine === 'vocal' ? 'vocal'
+                  : STATE.role === 'bass' ? 'bass'
+                  : STATE.role === 'chord' ? 'chord'
+                  : 'lead';
+    result = generateRiff({
+      ...common,
+      bpm: ui.bpm,
+      style: STATE.style,
+      role: genRole,
+      voicing: STATE.voicing,
+      extensions: STATE.extensions,
+    });
+    if (STATE.acid) {
+      applyAcidSlides(result, 0.45 + (STATE.sliders.syncopation ?? 0.3) * 0.4, mulberry32(seed ^ 0x5EED));
+    }
+  }
 
   // Build harmonized voices with optional canonic delay. Done in a single pass:
   // pre-filter source notes by whether they'd still fall inside the phrase, then
@@ -650,9 +555,8 @@ function generate() {
     bpm: ui.bpm,
   };
 
-  const styleLabel = PRESETS[STATE.presetKey]?.label ?? STATE.style;
   document.getElementById('seed-display').textContent =
-    `seed: ${seed.toString(16).padStart(8, '0')}   ·   ${ui.rootName} ${ui.scaleName}   ·   ${ui.bars} takter @ ${ui.bpm} bpm   ·   ${styleLabel}`;
+    `seed: ${seed.toString(16).padStart(8, '0')}   ·   ${ui.rootName} ${ui.scaleName}   ·   ${ui.bars} takter @ ${ui.bpm} bpm   ·   ${comboLabel()}`;
 
   renderPianoRoll();
 }
@@ -981,7 +885,7 @@ function download() {
       tracks.push({ name: `Stämma ${i + 1}`, channel: i + 1, program: 80, notes: v });
     });
     const ui = readUI();
-    filename = `riff_${ui.rootName.replace('#', 's')}_${ui.scaleName}_${STATE.style}_${seedHex}.mid`;
+    filename = `riff_${ui.rootName.replace('#', 's')}_${ui.scaleName}_${STATE.genre}_${STATE.role}_${seedHex}.mid`;
   }
 
   const bytes = writeMidi({ bpm, tracks });
