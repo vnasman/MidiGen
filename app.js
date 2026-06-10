@@ -212,6 +212,7 @@ function buildSliders() {
     if (!btn) return;
     STATE.sliders[btn.dataset.id] = (+btn.dataset.step) / 4;
     refreshSliderUI();
+    regenerate();   // sculpt the current riff — same seed, new parameter
   });
   refreshSliderUI();
 }
@@ -248,7 +249,7 @@ function bindChips() {
     extSel.innerHTML = EXTENSION_OPTIONS
       .map(o => `<option value="${o.value}">${o.label}</option>`)
       .join('');
-    extSel.addEventListener('change', e => { STATE.extensions = e.target.value; });
+    extSel.addEventListener('change', e => { STATE.extensions = e.target.value; regenerate(); });
   }
 }
 
@@ -335,8 +336,9 @@ function refreshExtensionsUI() {
 // ---------- VOICES ----------
 function bindVoiceUI() {
   document.getElementById('add-voice').addEventListener('click', () => {
-    STATE.voices.push({ optionIndex: 7, delayIndex: 0, velOffset: -10 }); // default: octave up, samtidig
+    STATE.voices.push({ optionIndex: 7, delayIndex: 0, velOffset: -10 }); // default: octave up, simultaneous
     renderVoices();
+    regenerate();   // layer the voice onto the current riff without rerolling it
   });
 }
 
@@ -379,22 +381,26 @@ function renderVoices() {
   root.querySelectorAll('[data-voice-interval]').forEach(s => {
     s.addEventListener('change', e => {
       STATE.voices[+e.target.dataset.voiceInterval].optionIndex = +e.target.value;
+      regenerate();
     });
   });
   root.querySelectorAll('[data-voice-delay]').forEach(s => {
     s.addEventListener('change', e => {
       STATE.voices[+e.target.dataset.voiceDelay].delayIndex = +e.target.value;
+      regenerate();
     });
   });
   root.querySelectorAll('[data-voice-vel]').forEach(s => {
     s.addEventListener('change', e => {
       STATE.voices[+e.target.dataset.voiceVel].velOffset = +e.target.value;
+      regenerate();
     });
   });
   root.querySelectorAll('[data-remove]').forEach(b => {
     b.addEventListener('click', e => {
       STATE.voices.splice(+e.target.dataset.remove, 1);
       renderVoices();
+      regenerate();
     });
   });
 }
@@ -402,13 +408,22 @@ function renderVoices() {
 // ---------- ACTIONS ----------
 function bindActions() {
   document.getElementById('random').addEventListener('click', randomize);
-  document.getElementById('generate').addEventListener('click', generate);
+  // "New riff" always rolls a fresh seed — the explicit "give me a new idea" action.
+  document.getElementById('generate').addEventListener('click', () => generate({ newSeed: true }));
   document.getElementById('play').addEventListener('click', play);
   document.getElementById('stop').addEventListener('click', stop);
   document.getElementById('download').addEventListener('click', download);
   document.getElementById('clear-prog').addEventListener('click', () => {
     document.getElementById('progression').value = '';
+    regenerate();
   });
+
+  // Musical context changes iterate on the current idea: same seed, new
+  // parameters. Changing key = exact transposition of the riff you have.
+  for (const id of ['root', 'scale', 'bars', 'bpm']) {
+    document.getElementById(id).addEventListener('change', regenerate);
+  }
+  document.getElementById('progression').addEventListener('change', regenerate);
 }
 
 function randomize() {
@@ -450,9 +465,19 @@ function readUI() {
   return { rootName, scaleName, bars, bpm, tonicMidi, scaleIntervals, chordProgression };
 }
 
-function generate() {
+// Re-render the CURRENT idea with updated parameters (same seed). Used by all
+// tweak controls so fine-tuning sculpts the existing riff instead of rolling
+// a new one. "New riff" / RANDOM / chip clicks roll a fresh seed instead.
+function regenerate() {
+  generate({ newSeed: false });
+}
+
+function generate(opts = {}) {
+  const newSeed = opts.newSeed ?? true;
   const ui = readUI();
-  const seed = Math.floor(Math.random() * 0xFFFFFFFF);
+  const seed = (!newSeed && STATE.currentSeed != null)
+    ? STATE.currentSeed
+    : Math.floor(Math.random() * 0xFFFFFFFF);
   STATE.currentSeed = seed;
 
   if (STATE.engine === 'drums') {
