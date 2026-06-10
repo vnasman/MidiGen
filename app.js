@@ -284,10 +284,9 @@ function applyCombo(roleId, genreId, { audition = false } = {}) {
   refreshPanelVisibility();
   refreshSliderUI();
 
-  if (audition) {
-    generate();
-    play();   // the chip click is a user gesture, so audio is allowed to start
-  }
+  // Regenerate the preview so the piano roll reflects the new combo,
+  // but never auto-play — sound starts only via the Play button.
+  if (audition) generate();
 }
 
 function comboLabel() {
