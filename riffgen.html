@@ -251,84 +251,124 @@ button.big {
 }
 .preset-tip:empty { display: none; }
 
-/* ── Sliders ──────────────────────────────────────── */
-.sliders {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
+/* ── Segmented controls (Finjustering) ────────────── */
+.tweaks {
+  margin-top: 18px;
+  border-top: 1px solid var(--border);
+  padding-top: 4px;
 }
 
-.slider {
+.tweaks summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 10px 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+  user-select: none;
+}
+.tweaks summary::-webkit-details-marker { display: none; }
+.tweaks summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 8px;
+  transition: transform 0.15s;
+  color: var(--accent);
+}
+.tweaks[open] summary::before { transform: rotate(90deg); }
+.tweaks summary:hover { color: var(--text); }
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px 28px;
+  padding: 8px 0 6px;
+}
+
+.control {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
-.slider label {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  text-transform: none;
-  letter-spacing: 0;
-  font-size: 13px;
-  font-weight: 500;
+.control-label {
+  font-size: 12px;
+  font-weight: 600;
   color: var(--text);
 }
 
-.slider label > span:first-child > span {
-  font-weight: 400;
-  color: var(--text-muted);
-  font-size: 12px;
-  margin-left: 6px;
+.segs {
+  display: flex;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--panel);
 }
 
-.slider label .value {
-  font-size: 12px;
-  color: var(--accent);
-  font-variant-numeric: tabular-nums;
+.seg {
+  flex: 1;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 8px 2px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.seg + .seg { border-left: 1px solid var(--border); }
+.seg:hover { background: var(--bg-soft); color: var(--text); }
+.seg.active {
+  background: var(--accent);
+  color: var(--accent-on);
   font-weight: 600;
 }
 
-input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 4px;
-  background: var(--border);
-  border-radius: 2px;
-  outline: none;
-  cursor: pointer;
-  padding: 0;
-  margin: 0;
-}
-
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  background: var(--panel);
-  border: 2px solid var(--accent);
-  border-radius: 50%;
-  cursor: pointer;
-  box-shadow: var(--shadow-xs);
-  transition: transform 0.1s, box-shadow 0.1s;
-}
-input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.12);
-  box-shadow: var(--shadow-sm);
-}
-input[type="range"]::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  background: var(--panel);
-  border: 2px solid var(--accent);
-  border-radius: 50%;
-  cursor: pointer;
-  box-shadow: var(--shadow-xs);
-}
-
 /* ── Voices ───────────────────────────────────────── */
+/* Collapsible panels (Stämmor) */
+details.panel.collapsible summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  user-select: none;
+}
+details.panel.collapsible summary::-webkit-details-marker { display: none; }
+details.panel.collapsible summary::before {
+  content: '▸';
+  color: var(--accent);
+  transition: transform 0.15s;
+}
+details.panel.collapsible[open] summary::before { transform: rotate(90deg); }
+details.panel.collapsible .summary-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+}
+details.panel.collapsible summary:hover .summary-title { color: var(--text); }
+details.panel.collapsible .summary-meta {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 600;
+}
+details.panel.collapsible[open] summary { margin-bottom: 14px; }
+
+/* Ackordföljd row inside the merged Musik panel */
+.prog-row {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.prog-row .row { margin-top: 6px; }
+
 #voices {
   display: flex;
   flex-direction: column;
@@ -475,7 +515,7 @@ footer {
 
   <main>
     <section class="panel">
-      <h2>Tonart & form</h2>
+      <h2>Musik</h2>
       <div class="grid">
         <label>Grundton
           <select id="root">
@@ -509,15 +549,14 @@ footer {
           <input type="number" id="bpm" value="124" min="40" max="220">
         </label>
       </div>
-    </section>
-
-    <section class="panel" id="panel-progression">
-      <h2>Ackordföljd <span class="optional">(valfritt)</span></h2>
-      <div class="row">
-        <input type="text" id="progression" placeholder="t.ex.  i  VI  III  VII   eller   Am F C G   eller   i / VII / VI / VII">
-        <button id="clear-prog" class="ghost">Rensa</button>
+      <div id="panel-progression" class="prog-row">
+        <label>Ackordföljd <span class="optional">(valfritt)</span>
+          <div class="row">
+            <input type="text" id="progression" placeholder="t.ex.  i VI III VII  eller  Am F C G">
+            <button id="clear-prog" class="ghost">Rensa</button>
+          </div>
+        </label>
       </div>
-      <p class="hint">Romerska siffror (i, V, ♭VII, VImaj7) eller ackordnamn (Am, F#m7). En per takt — färre ackord sträcks ut.</p>
     </section>
 
     <section class="panel">
@@ -535,17 +574,18 @@ footer {
         </div>
         <div id="preset-tip" class="preset-tip"></div>
       </div>
-      <div class="sliders" id="sliders">
-        <!-- populated by app.js -->
-      </div>
+      <details class="tweaks" id="tweaks">
+        <summary>Finjustering</summary>
+        <div class="controls" id="sliders"></div>
+      </details>
     </section>
 
-    <section class="panel" id="panel-voices">
-      <h2>Stämmor</h2>
+    <details class="panel collapsible" id="panel-voices">
+      <summary><span class="summary-title">Stämmor</span> <span class="summary-meta" id="voice-count"></span></summary>
       <div id="voices"></div>
       <button id="add-voice" class="ghost">+ Lägg till stämma</button>
-      <p class="hint">Stämmor läggs till över/under huvudriffet. Diatonisk = snäpper till skalan. Parallell = bokstavlig transponering (kromatisk).</p>
-    </section>
+      <p class="hint">Stämmor läggs till över/under huvudriffet. Diatonisk = snäpper till skalan. Parallell = bokstavlig transponering.</p>
+    </details>
 
     <section class="actions">
       <button id="random" class="big primary">🎲 RANDOM</button>
@@ -1842,14 +1882,17 @@ function applyHarmony(notes, { kind, amount, tonicPc, scaleIntervals, basePitch 
 
 // UI controller: presets, sliders, voice management, playback, piano roll, MIDI export.
 
+// Each control is a 5-step segmented picker. Internal values stay continuous
+// 0..1 (presets keep their tuned numbers); the UI highlights the nearest step
+// and clicking a step sets the exact value i/4.
 const SLIDER_DEFS = [
-  { id: 'density',     label: 'Densitet',    hint: 'gles melodi → tätt riff' },
-  { id: 'variation',   label: 'Variation',   hint: 'upprepar motivet → varierar fritt' },
-  { id: 'syncopation', label: 'Synkopering', hint: 'off-beat-attack' },
-  { id: 'length',      label: 'Notlängd',    hint: 'staccato / legato' },
-  { id: 'register',    label: 'Register',    hint: 'bas → lead' },
-  { id: 'range',       label: 'Oktavspann',  hint: 'register-vidd' },
-  { id: 'chromatic',   label: 'Kromatik',    hint: 'icke-skala-toner' },
+  { id: 'density',     label: 'Densitet',    levels: ['Gles', 'Luftig', 'Lagom', 'Tät', 'Hektisk'] },
+  { id: 'variation',   label: 'Variation',   levels: ['Statisk', 'Lite', 'Lagom', 'Mycket', 'Fri'] },
+  { id: 'syncopation', label: 'Synkopering', levels: ['Rak', 'Lätt', 'Lagom', 'Synkig', 'Off-beat'] },
+  { id: 'length',      label: 'Notlängd',    levels: ['Staccato', 'Kort', 'Lagom', 'Lång', 'Legato'] },
+  { id: 'register',    label: 'Register',    levels: ['Djup bas', 'Bas', 'Mitt', 'Hög', 'Topp'] },
+  { id: 'range',       label: 'Oktavspann',  levels: ['Smal', 'Snäv', 'Lagom', 'Vid', 'Bred'] },
+  { id: 'chromatic',   label: 'Kromatik',    levels: ['Ren', 'Nästan', 'Lite', 'En del', 'Mycket'] },
 ];
 
 // Presets — internal `style` selects rhythm-cell vocabulary; `role` is 'lead' or
@@ -2172,33 +2215,31 @@ function buildSliders() {
   root.innerHTML = '';
   for (const def of SLIDER_DEFS) {
     const wrap = document.createElement('div');
-    wrap.className = 'slider';
+    wrap.className = 'control';
+    wrap.dataset.control = def.id;
     wrap.innerHTML = `
-      <label>
-        <span>${def.label} <span style="opacity:.55;text-transform:none;letter-spacing:0;font-size:11px">${def.hint}</span></span>
-        <span class="value" data-value="${def.id}">0</span>
-      </label>
-      <input type="range" min="0" max="100" step="1" id="slider-${def.id}" data-slider="${def.id}">
+      <span class="control-label">${def.label}</span>
+      <div class="segs" role="radiogroup" aria-label="${def.label}">
+        ${def.levels.map((lv, i) => `<button type="button" class="seg" data-id="${def.id}" data-step="${i}">${lv}</button>`).join('')}
+      </div>
     `;
     root.appendChild(wrap);
   }
-  for (const def of SLIDER_DEFS) {
-    const el = document.getElementById(`slider-${def.id}`);
-    el.addEventListener('input', e => {
-      STATE.sliders[def.id] = e.target.value / 100;
-      document.querySelector(`[data-value="${def.id}"]`).textContent = e.target.value;
-    });
-  }
+  root.addEventListener('click', e => {
+    const btn = e.target.closest('.seg');
+    if (!btn) return;
+    STATE.sliders[btn.dataset.id] = (+btn.dataset.step) / 4;
+    refreshSliderUI();
+  });
   refreshSliderUI();
 }
 
 function refreshSliderUI() {
   for (const def of SLIDER_DEFS) {
-    const v = Math.round((STATE.sliders[def.id] ?? 0) * 100);
-    const el = document.getElementById(`slider-${def.id}`);
-    if (el) el.value = v;
-    const valEl = document.querySelector(`[data-value="${def.id}"]`);
-    if (valEl) valEl.textContent = v;
+    const active = Math.round((STATE.sliders[def.id] ?? 0) * 4);
+    document.querySelectorAll(`.seg[data-id="${def.id}"]`).forEach((btn, i) => {
+      btn.classList.toggle('active', i === active);
+    });
   }
 }
 
@@ -2271,10 +2312,10 @@ function refreshPanelVisibility() {
     if (el) el.closest('label').style.display = isDrums ? 'none' : '';
   }
 
-  // Pitch-related sliders are meaningless for drums.
+  // Pitch-related controls are meaningless for drums.
   for (const id of DRUM_HIDDEN_SLIDERS) {
-    const input = document.getElementById(`slider-${id}`);
-    if (input) input.closest('.slider').style.display = isDrums ? 'none' : '';
+    const ctrl = document.querySelector(`[data-control="${id}"]`);
+    if (ctrl) ctrl.style.display = isDrums ? 'none' : '';
   }
 }
 
@@ -2299,6 +2340,12 @@ function bindVoiceUI() {
 function renderVoices() {
   const root = document.getElementById('voices');
   root.innerHTML = '';
+  // Keep the collapsed-summary counter in sync, and pop the panel open when
+  // voices exist so active settings are never hidden.
+  const counter = document.getElementById('voice-count');
+  if (counter) counter.textContent = STATE.voices.length ? `${STATE.voices.length} aktiva` : '';
+  const panel = document.getElementById('panel-voices');
+  if (panel && STATE.voices.length > 0) panel.open = true;
   STATE.voices.forEach((voice, idx) => {
     const row = document.createElement('div');
     row.className = 'voice-row';
@@ -2374,7 +2421,8 @@ function randomize() {
   applyPreset(presetName);
   for (const def of SLIDER_DEFS) {
     const nudge = (Math.random() - 0.5) * 0.3;
-    STATE.sliders[def.id] = Math.max(0, Math.min(1, STATE.sliders[def.id] + nudge));
+    // Snap to quarter steps so the segmented UI always shows the exact state.
+    STATE.sliders[def.id] = Math.round(Math.max(0, Math.min(1, STATE.sliders[def.id] + nudge)) * 4) / 4;
   }
   refreshSliderUI();
 

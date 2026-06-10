@@ -17,7 +17,7 @@
 
   <main>
     <section class="panel">
-      <h2>Tonart & form</h2>
+      <h2>Musik</h2>
       <div class="grid">
         <label>Grundton
           <select id="root">
@@ -51,15 +51,14 @@
           <input type="number" id="bpm" value="124" min="40" max="220">
         </label>
       </div>
-    </section>
-
-    <section class="panel" id="panel-progression">
-      <h2>Ackordföljd <span class="optional">(valfritt)</span></h2>
-      <div class="row">
-        <input type="text" id="progression" placeholder="t.ex.  i  VI  III  VII   eller   Am F C G   eller   i / VII / VI / VII">
-        <button id="clear-prog" class="ghost">Rensa</button>
+      <div id="panel-progression" class="prog-row">
+        <label>Ackordföljd <span class="optional">(valfritt)</span>
+          <div class="row">
+            <input type="text" id="progression" placeholder="t.ex.  i VI III VII  eller  Am F C G">
+            <button id="clear-prog" class="ghost">Rensa</button>
+          </div>
+        </label>
       </div>
-      <p class="hint">Romerska siffror (i, V, ♭VII, VImaj7) eller ackordnamn (Am, F#m7). En per takt — färre ackord sträcks ut.</p>
     </section>
 
     <section class="panel">
@@ -77,17 +76,18 @@
         </div>
         <div id="preset-tip" class="preset-tip"></div>
       </div>
-      <div class="sliders" id="sliders">
-        <!-- populated by app.js -->
-      </div>
+      <details class="tweaks" id="tweaks">
+        <summary>Finjustering</summary>
+        <div class="controls" id="sliders"></div>
+      </details>
     </section>
 
-    <section class="panel" id="panel-voices">
-      <h2>Stämmor</h2>
+    <details class="panel collapsible" id="panel-voices">
+      <summary><span class="summary-title">Stämmor</span> <span class="summary-meta" id="voice-count"></span></summary>
       <div id="voices"></div>
       <button id="add-voice" class="ghost">+ Lägg till stämma</button>
-      <p class="hint">Stämmor läggs till över/under huvudriffet. Diatonisk = snäpper till skalan. Parallell = bokstavlig transponering (kromatisk).</p>
-    </section>
+      <p class="hint">Stämmor läggs till över/under huvudriffet. Diatonisk = snäpper till skalan. Parallell = bokstavlig transponering.</p>
+    </details>
 
     <section class="actions">
       <button id="random" class="big primary">🎲 RANDOM</button>

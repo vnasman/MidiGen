@@ -1,13 +1,16 @@
 // UI controller: presets, sliders, voice management, playback, piano roll, MIDI export.
 
+// Each control is a 5-step segmented picker. Internal values stay continuous
+// 0..1 (presets keep their tuned numbers); the UI highlights the nearest step
+// and clicking a step sets the exact value i/4.
 const SLIDER_DEFS = [
-  { id: 'density',     label: 'Densitet',    hint: 'gles melodi → tätt riff' },
-  { id: 'variation',   label: 'Variation',   hint: 'upprepar motivet → varierar fritt' },
-  { id: 'syncopation', label: 'Synkopering', hint: 'off-beat-attack' },
-  { id: 'length',      label: 'Notlängd',    hint: 'staccato / legato' },
-  { id: 'register',    label: 'Register',    hint: 'bas → lead' },
-  { id: 'range',       label: 'Oktavspann',  hint: 'register-vidd' },
-  { id: 'chromatic',   label: 'Kromatik',    hint: 'icke-skala-toner' },
+  { id: 'density',     label: 'Densitet',    levels: ['Gles', 'Luftig', 'Lagom', 'Tät', 'Hektisk'] },
+  { id: 'variation',   label: 'Variation',   levels: ['Statisk', 'Lite', 'Lagom', 'Mycket', 'Fri'] },
+  { id: 'syncopation', label: 'Synkopering', levels: ['Rak', 'Lätt', 'Lagom', 'Synkig', 'Off-beat'] },
+  { id: 'length',      label: 'Notlängd',    levels: ['Staccato', 'Kort', 'Lagom', 'Lång', 'Legato'] },
+  { id: 'register',    label: 'Register',    levels: ['Djup bas', 'Bas', 'Mitt', 'Hög', 'Topp'] },
+  { id: 'range',       label: 'Oktavspann',  levels: ['Smal', 'Snäv', 'Lagom', 'Vid', 'Bred'] },
+  { id: 'chromatic',   label: 'Kromatik',    levels: ['Ren', 'Nästan', 'Lite', 'En del', 'Mycket'] },
 ];
 
 // Presets — internal `style` selects rhythm-cell vocabulary; `role` is 'lead' or
@@ -330,33 +333,31 @@ function buildSliders() {
   root.innerHTML = '';
   for (const def of SLIDER_DEFS) {
     const wrap = document.createElement('div');
-    wrap.className = 'slider';
+    wrap.className = 'control';
+    wrap.dataset.control = def.id;
     wrap.innerHTML = `
-      <label>
-        <span>${def.label} <span style="opacity:.55;text-transform:none;letter-spacing:0;font-size:11px">${def.hint}</span></span>
-        <span class="value" data-value="${def.id}">0</span>
-      </label>
-      <input type="range" min="0" max="100" step="1" id="slider-${def.id}" data-slider="${def.id}">
+      <span class="control-label">${def.label}</span>
+      <div class="segs" role="radiogroup" aria-label="${def.label}">
+        ${def.levels.map((lv, i) => `<button type="button" class="seg" data-id="${def.id}" data-step="${i}">${lv}</button>`).join('')}
+      </div>
     `;
     root.appendChild(wrap);
   }
-  for (const def of SLIDER_DEFS) {
-    const el = document.getElementById(`slider-${def.id}`);
-    el.addEventListener('input', e => {
-      STATE.sliders[def.id] = e.target.value / 100;
-      document.querySelector(`[data-value="${def.id}"]`).textContent = e.target.value;
-    });
-  }
+  root.addEventListener('click', e => {
+    const btn = e.target.closest('.seg');
+    if (!btn) return;
+    STATE.sliders[btn.dataset.id] = (+btn.dataset.step) / 4;
+    refreshSliderUI();
+  });
   refreshSliderUI();
 }
 
 function refreshSliderUI() {
   for (const def of SLIDER_DEFS) {
-    const v = Math.round((STATE.sliders[def.id] ?? 0) * 100);
-    const el = document.getElementById(`slider-${def.id}`);
-    if (el) el.value = v;
-    const valEl = document.querySelector(`[data-value="${def.id}"]`);
-    if (valEl) valEl.textContent = v;
+    const active = Math.round((STATE.sliders[def.id] ?? 0) * 4);
+    document.querySelectorAll(`.seg[data-id="${def.id}"]`).forEach((btn, i) => {
+      btn.classList.toggle('active', i === active);
+    });
   }
 }
 
@@ -429,10 +430,10 @@ function refreshPanelVisibility() {
     if (el) el.closest('label').style.display = isDrums ? 'none' : '';
   }
 
-  // Pitch-related sliders are meaningless for drums.
+  // Pitch-related controls are meaningless for drums.
   for (const id of DRUM_HIDDEN_SLIDERS) {
-    const input = document.getElementById(`slider-${id}`);
-    if (input) input.closest('.slider').style.display = isDrums ? 'none' : '';
+    const ctrl = document.querySelector(`[data-control="${id}"]`);
+    if (ctrl) ctrl.style.display = isDrums ? 'none' : '';
   }
 }
 
@@ -457,6 +458,12 @@ function bindVoiceUI() {
 function renderVoices() {
   const root = document.getElementById('voices');
   root.innerHTML = '';
+  // Keep the collapsed-summary counter in sync, and pop the panel open when
+  // voices exist so active settings are never hidden.
+  const counter = document.getElementById('voice-count');
+  if (counter) counter.textContent = STATE.voices.length ? `${STATE.voices.length} aktiva` : '';
+  const panel = document.getElementById('panel-voices');
+  if (panel && STATE.voices.length > 0) panel.open = true;
   STATE.voices.forEach((voice, idx) => {
     const row = document.createElement('div');
     row.className = 'voice-row';
@@ -532,7 +539,8 @@ function randomize() {
   applyPreset(presetName);
   for (const def of SLIDER_DEFS) {
     const nudge = (Math.random() - 0.5) * 0.3;
-    STATE.sliders[def.id] = Math.max(0, Math.min(1, STATE.sliders[def.id] + nudge));
+    // Snap to quarter steps so the segmented UI always shows the exact state.
+    STATE.sliders[def.id] = Math.round(Math.max(0, Math.min(1, STATE.sliders[def.id] + nudge)) * 4) / 4;
   }
   refreshSliderUI();
 
