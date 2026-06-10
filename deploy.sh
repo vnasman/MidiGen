@@ -1,13 +1,13 @@
 #!/bin/zsh
-# Bygg om bundlen, committa allt och pusha till GitHub (= uppdatera GitHub Pages).
-# Användning: ./deploy.sh "valfritt commit-meddelande"
+# Rebuild the bundle, commit everything and push to GitHub (= update GitHub Pages).
+# Usage: ./deploy.sh "optional commit message"
 set -e
 cd "$(dirname "$0")"
 
 python3 build.py
 
-MSG="${1:-Uppdatering $(date '+%Y-%m-%d %H:%M')}"
+MSG="${1:-Update $(date '+%Y-%m-%d %H:%M')}"
 git add -A
-git commit -m "$MSG" || { echo "Inget att committa."; exit 0; }
+git commit -m "$MSG" || { echo "Nothing to commit."; exit 0; }
 git push
-echo "✓ Pushat — GitHub Pages uppdateras inom någon minut."
+echo "✓ Pushed — GitHub Pages updates within a minute."

@@ -4,27 +4,27 @@
 // 0..1 (presets keep their tuned numbers); the UI highlights the nearest step
 // and clicking a step sets the exact value i/4.
 const SLIDER_DEFS = [
-  { id: 'density',     label: 'Densitet',    levels: ['Gles', 'Luftig', 'Lagom', 'Tät', 'Hektisk'] },
-  { id: 'variation',   label: 'Variation',   levels: ['Statisk', 'Lite', 'Lagom', 'Mycket', 'Fri'] },
-  { id: 'syncopation', label: 'Synkopering', levels: ['Rak', 'Lätt', 'Lagom', 'Synkig', 'Off-beat'] },
-  { id: 'length',      label: 'Notlängd',    levels: ['Staccato', 'Kort', 'Lagom', 'Lång', 'Legato'] },
-  { id: 'register',    label: 'Register',    levels: ['Djup bas', 'Bas', 'Mitt', 'Hög', 'Topp'] },
-  { id: 'range',       label: 'Oktavspann',  levels: ['Smal', 'Snäv', 'Lagom', 'Vid', 'Bred'] },
-  { id: 'chromatic',   label: 'Kromatik',    levels: ['Ren', 'Nästan', 'Lite', 'En del', 'Mycket'] },
+  { id: 'density',     label: 'Density',     levels: ['Sparse', 'Airy', 'Medium', 'Dense', 'Hectic'] },
+  { id: 'variation',   label: 'Variation',   levels: ['Static', 'Slight', 'Medium', 'High', 'Free'] },
+  { id: 'syncopation', label: 'Syncopation', levels: ['Straight', 'Light', 'Medium', 'Synced', 'Off-beat'] },
+  { id: 'length',      label: 'Note length', levels: ['Staccato', 'Short', 'Medium', 'Long', 'Legato'] },
+  { id: 'register',    label: 'Register',    levels: ['Sub bass', 'Bass', 'Mid', 'High', 'Top'] },
+  { id: 'range',       label: 'Octave span', levels: ['Narrow', 'Tight', 'Medium', 'Wide', 'Broad'] },
+  { id: 'chromatic',   label: 'Chromatics',  levels: ['Pure', 'Hint', 'Some', 'Spicy', 'Heavy'] },
 ];
 
-// ── Roll × Genre-matris ──────────────────────────────────────────────
-// Varje kombination (roll, genre) löses till ett recept: motor + stil-DNA +
-// slider-defaults + tips. ROLE_BASE ger grundvärden per roll; recepten
-// överskriver bara det som avviker.
+// ── Role × Genre matrix ──────────────────────────────────────────────
+// Each (role, genre) combination resolves to a recipe: engine + style DNA +
+// slider defaults + tip. ROLE_BASE provides per-role baselines; recipes only
+// override what differs.
 
 const ROLES = [
-  { id: 'bass',   label: 'Bas' },
+  { id: 'bass',   label: 'Bass' },
   { id: 'lead',   label: 'Lead' },
-  { id: 'melody', label: 'Melodi' },
-  { id: 'chord',  label: 'Ackord' },
+  { id: 'melody', label: 'Melody' },
+  { id: 'chord',  label: 'Chords' },
   { id: 'arp',    label: 'Arp' },
-  { id: 'drums',  label: 'Trummor' },
+  { id: 'drums',  label: 'Drums' },
 ];
 
 const GENRES = [
@@ -33,7 +33,7 @@ const GENRES = [
   { id: 'rock',    label: 'Rock' },
   { id: 'reggae',  label: 'Reggae' },
   { id: 'latin',   label: 'Latin' },
-  { id: 'baroque', label: 'Barock' },
+  { id: 'baroque', label: 'Baroque' },
   { id: 'jazz',    label: 'Jazz/Soul' },
   { id: 'synth',   label: 'Synth/Trance' },
   { id: 'lofi',    label: 'Lo-fi' },
@@ -49,115 +49,115 @@ const ROLE_BASE = {
   drums:  { density: 0.50, variation: 0.35, syncopation: 0.25, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00 },
 };
 
-// engine: 'riff' (Markov+mallar), 'vocal' (riff med sångbarhets-bias),
-// 'arp' (deterministisk arpeggiator), 'walking', 'berlin', 'drums'.
+// engine: 'riff' (Markov + templates), 'vocal' (riff with singability bias),
+// 'arp' (deterministic arpeggiator), 'walking', 'berlin', 'drums'.
 const RECIPES = {
   bass: {
-    french:  { engine: 'riff', style: 'genesis', tip: 'Justice-bas: distad saw, kort sustain, lowpass. 110–125 BPM.' },
-    disco:   { engine: 'arp', pattern: 'octave', sliders: { density: 0.30, register: 0.05, length: 0.45 }, tip: 'Oktav-studs à la Chic / "Around the World". Fingerbas eller synthbas med pluck. 110–122 BPM.' },
-    rock:    { engine: 'riff', style: 'rock', sliders: { register: 0.15, length: 0.40 }, tip: 'Pentatonisk power-bas — dubbla gärna gitarrens riff. 90–140 BPM.' },
-    reggae:  { engine: 'riff', style: 'reggae', sliders: { density: 0.35, syncopation: 0.50, length: 0.60, register: 0.05 }, tip: 'Dub-bas: rund, dämpad diskant, pauserna bär grooven. 70–90 BPM.' },
-    latin:   { engine: 'riff', style: 'latin', sliders: { syncopation: 0.60 }, tip: 'Tumbao-känsla — synkoperad rot/kvint. Para med Latin-trummor. 90–110 BPM.' },
-    baroque: { engine: 'riff', style: 'baroque', sliders: { length: 0.55, density: 0.45 }, tip: 'Continuo: vandrande basstämma, cello eller orgelpedal. Fungerar fint under en fuga-lead.' },
-    jazz:    { engine: 'walking', sliders: { density: 0.40 }, tip: 'Walking bass: rot på 1:an, kromatisk approach in i varje nytt ackord. Swinga 8:orna i din DAW. Kontrabas/fingerbas.' },
-    synth:   { engine: 'riff', style: 'acid', acid: true, sliders: { density: 0.65, length: 0.35 }, tip: '303-acid: överlappande noter = glide på TB-303-synthar (sätt mono+glide). Accenterna gör resten. 125–140 BPM.' },
-    lofi:    { engine: 'riff', style: 'pulse', sliders: { density: 0.25, length: 0.70 }, tip: 'Half-time sub-bas, få toner, låt den gunga. Sinus eller mjuk saw. 70–90 BPM.' },
-    minimal: { engine: 'riff', style: 'pulse', sliders: { density: 0.30, variation: 0.10 }, tip: 'Pulserande rot-bas — hypnotisk repetition. Sidechain mot kicken. 120–130 BPM.' },
+    french:  { engine: 'riff', style: 'genesis', tip: 'Justice-style bass: distorted saw, short sustain, lowpass. 110–125 BPM.' },
+    disco:   { engine: 'arp', pattern: 'octave', sliders: { density: 0.30, register: 0.05, length: 0.45 }, tip: 'Octave bounce à la Chic / "Around the World". Finger bass or plucky synth bass. 110–122 BPM.' },
+    rock:    { engine: 'riff', style: 'rock', sliders: { register: 0.15, length: 0.40 }, tip: 'Pentatonic power bass — double the guitar riff. 90–140 BPM.' },
+    reggae:  { engine: 'riff', style: 'reggae', sliders: { density: 0.35, syncopation: 0.50, length: 0.60, register: 0.05 }, tip: 'Dub bass: round, rolled-off top end — the rests carry the groove. 70–90 BPM.' },
+    latin:   { engine: 'riff', style: 'latin', sliders: { syncopation: 0.60 }, tip: 'Tumbao feel — syncopated root/fifth. Pair with the Latin drums. 90–110 BPM.' },
+    baroque: { engine: 'riff', style: 'baroque', sliders: { length: 0.55, density: 0.45 }, tip: 'Continuo: a walking bass voice — cello or organ pedal. Sits beautifully under a fugue lead.' },
+    jazz:    { engine: 'walking', sliders: { density: 0.40 }, tip: 'Walking bass: root on beat 1, chromatic approach into every new chord. Swing the 8ths in your DAW. Upright/finger bass.' },
+    synth:   { engine: 'riff', style: 'acid', acid: true, sliders: { density: 0.65, length: 0.35 }, tip: '303 acid: overlapping notes = glide on TB-303-style synths (set mono + glide). The accents do the rest. 125–140 BPM.' },
+    lofi:    { engine: 'riff', style: 'pulse', sliders: { density: 0.25, length: 0.70 }, tip: 'Half-time sub bass, few notes, let it sway. Sine or soft saw. 70–90 BPM.' },
+    minimal: { engine: 'riff', style: 'pulse', sliders: { density: 0.30, variation: 0.10 }, tip: 'Pulsing root bass — hypnotic repetition. Sidechain against the kick. 120–130 BPM.' },
   },
   lead: {
-    french:  { engine: 'riff', style: 'dance', tip: 'Funkig filtered lead à la D.A.N.C.E. Phaser + lowpass-automation. 110–125 BPM.' },
-    disco:   { engine: 'riff', style: 'cosmic', sliders: { variation: 0.45 }, tip: 'Cosmic disco-lead à la Todd Terje — arpeggio-aktig, lekfull. Analog poly-synth. 105–120 BPM.' },
-    rock:    { engine: 'riff', style: 'rock', sliders: { register: 0.35, chromatic: 0.05 }, tip: 'Pentatoniskt gitarriff. Mollpentatonisk skala rekommenderas. Lägg stämma "Oktav ned" för power.' },
-    reggae:  { engine: 'riff', style: 'reggae', sliders: { density: 0.35, syncopation: 0.60 }, tip: 'Melodica/orgel-lead med luft — tänk Augustus Pablo. 70–90 BPM.' },
-    latin:   { engine: 'riff', style: 'latin', sliders: { density: 0.65, syncopation: 0.60, length: 0.35 }, tip: 'Montuno-piano: synkoperat arpeggio-mönster. Dubbla i oktaver (stämma "Oktav upp", samtidig). 90–110 BPM.' },
-    baroque: { engine: 'riff', style: 'baroque', sliders: { density: 0.55, length: 0.70, chromatic: 0.15 }, tip: 'Fuga-subjekt: lägg "Kvint upp diatoniskt / 1 takt senare" + "Oktav upp / 2 takter senare" för exposition. Orgel/cembalo.' },
-    jazz:    { engine: 'riff', style: 'dance', sliders: { chromatic: 0.30, syncopation: 0.55, length: 0.40 }, tip: 'Bluesig lead — testa blues- eller dorisk skala. Rhodes eller gitarr. Swinga 8:orna.' },
-    synth:   { engine: 'riff', style: 'phantom', sliders: { density: 0.85, length: 0.30, chromatic: 0.40 }, tip: 'Snabb kromatisk synth-lead à la Justice "Phantom". Hård saw + unison. 120–130 BPM.' },
-    lofi:    { engine: 'riff', style: 'ambient', sliders: { density: 0.30, length: 0.70, variation: 0.45 }, tip: 'Mjuk lead över lo-fi-komp — Rhodes/gitarr med tape-vibb. 70–85 BPM.' },
-    minimal: { engine: 'berlin', sliders: { density: 0.60, variation: 0.25, length: 0.25, register: 0.45 }, tip: 'Berlin school-sekvens: exakt repetition med små mutationer var 4:e takt. Analog mono-synth + delay. Tangerine Dream / melodisk techno.' },
+    french:  { engine: 'riff', style: 'dance', tip: 'Funky filtered lead à la D.A.N.C.E. Phaser + lowpass automation. 110–125 BPM.' },
+    disco:   { engine: 'riff', style: 'cosmic', sliders: { variation: 0.45 }, tip: 'Cosmic disco lead à la Todd Terje — arpeggio-ish, playful. Analog poly synth. 105–120 BPM.' },
+    rock:    { engine: 'riff', style: 'rock', sliders: { register: 0.35, chromatic: 0.05 }, tip: 'Pentatonic guitar riff. Minor pentatonic scale recommended. Add an "Octave down" voice for power.' },
+    reggae:  { engine: 'riff', style: 'reggae', sliders: { density: 0.35, syncopation: 0.60 }, tip: 'Melodica/organ lead with space — think Augustus Pablo. 70–90 BPM.' },
+    latin:   { engine: 'riff', style: 'latin', sliders: { density: 0.65, syncopation: 0.60, length: 0.35 }, tip: 'Montuno piano: syncopated arpeggio pattern. Double in octaves ("Octave up" voice, simultaneous). 90–110 BPM.' },
+    baroque: { engine: 'riff', style: 'baroque', sliders: { density: 0.55, length: 0.70, chromatic: 0.15 }, tip: 'Fugue subject: add "Fifth up diatonic / 1 bar later" + "Octave up / 2 bars later" for an exposition. Organ/harpsichord.' },
+    jazz:    { engine: 'riff', style: 'dance', sliders: { chromatic: 0.30, syncopation: 0.55, length: 0.40 }, tip: 'Bluesy lead — try the blues or dorian scale. Rhodes or guitar. Swing the 8ths.' },
+    synth:   { engine: 'riff', style: 'phantom', sliders: { density: 0.85, length: 0.30, chromatic: 0.40 }, tip: 'Fast chromatic synth lead à la Justice "Phantom". Hard saw + unison. 120–130 BPM.' },
+    lofi:    { engine: 'riff', style: 'ambient', sliders: { density: 0.30, length: 0.70, variation: 0.45 }, tip: 'Soft lead over a lo-fi beat — Rhodes/guitar with tape wobble. 70–85 BPM.' },
+    minimal: { engine: 'berlin', sliders: { density: 0.60, variation: 0.25, length: 0.25, register: 0.45 }, tip: 'Berlin school sequence: exact repetition with small mutations every 4 bars. Analog mono synth + delay. Tangerine Dream / melodic techno.' },
   },
   melody: {
-    french:  { engine: 'vocal', style: 'anthem', tip: 'Sångbar hook över house-komp. Stegvis rörelse, gap-fill efter språng. Skriv text på den!' },
-    disco:   { engine: 'vocal', style: 'anthem', sliders: { syncopation: 0.30 }, tip: 'Disco-refräng — sjungbar, lite synkop. Strings unisont gör den episk. 110–122 BPM.' },
-    rock:    { engine: 'vocal', style: 'rock', sliders: { density: 0.30 }, tip: 'Rocksång — pentatonisk, råare. Testa mollpentatonisk skala.' },
-    reggae:  { engine: 'vocal', style: 'reggae', sliders: { syncopation: 0.40 }, tip: 'Laidback vokalmelodi med off-beat-frasering. 70–90 BPM.' },
-    latin:   { engine: 'vocal', style: 'latin', sliders: { density: 0.35, syncopation: 0.45 }, tip: 'Son/salsa-melodi — synkoperad men sångbar. Clave i ryggen.' },
-    baroque: { engine: 'vocal', style: 'baroque', sliders: { density: 0.35, length: 0.90 }, tip: 'Aria-linje: stegvis, lång frasering. Vacker på stråk eller oboe-patch.' },
-    jazz:    { engine: 'vocal', style: 'anthem', sliders: { chromatic: 0.15, syncopation: 0.35 }, tip: 'Standards-melodi med kromatiska färgtoner. Swinga frasering i DAW:n.' },
-    synth:   { engine: 'vocal', style: 'italo', sliders: { density: 0.30, length: 0.75 }, tip: 'Synthpop-topline à la 80-tal — sångbar över italo-arp. 110–125 BPM.' },
-    lofi:    { engine: 'vocal', style: 'ambient', sliders: { density: 0.18, length: 0.95 }, tip: 'Drömsk, gles melodi — få toner, mycket rymd. Mjuk sinus-lead eller humming.' },
-    minimal: { engine: 'vocal', style: 'pulse', sliders: { density: 0.20, variation: 0.30 }, tip: 'Minimal hook — två-tre toner som etsar sig fast. Mindre är mer.' },
+    french:  { engine: 'vocal', style: 'anthem', tip: 'Singable hook over a house groove. Stepwise motion, gap-fill after leaps. Write lyrics to it!' },
+    disco:   { engine: 'vocal', style: 'anthem', sliders: { syncopation: 0.30 }, tip: 'Disco chorus — singable, lightly syncopated. Unison strings make it epic. 110–122 BPM.' },
+    rock:    { engine: 'vocal', style: 'rock', sliders: { density: 0.30 }, tip: 'Rock vocal — pentatonic, rawer. Try the minor pentatonic scale.' },
+    reggae:  { engine: 'vocal', style: 'reggae', sliders: { syncopation: 0.40 }, tip: 'Laid-back vocal melody with off-beat phrasing. 70–90 BPM.' },
+    latin:   { engine: 'vocal', style: 'latin', sliders: { density: 0.35, syncopation: 0.45 }, tip: 'Son/salsa melody — syncopated but singable. Clave at its back.' },
+    baroque: { engine: 'vocal', style: 'baroque', sliders: { density: 0.35, length: 0.90 }, tip: 'Aria line: stepwise, long phrasing. Beautiful on strings or an oboe patch.' },
+    jazz:    { engine: 'vocal', style: 'anthem', sliders: { chromatic: 0.15, syncopation: 0.35 }, tip: 'Standards melody with chromatic color tones. Swing the phrasing in your DAW.' },
+    synth:   { engine: 'vocal', style: 'italo', sliders: { density: 0.30, length: 0.75 }, tip: '80s synth-pop topline — singable over an italo arp. 110–125 BPM.' },
+    lofi:    { engine: 'vocal', style: 'ambient', sliders: { density: 0.18, length: 0.95 }, tip: 'Dreamy, sparse melody — few notes, lots of space. Soft sine lead or humming.' },
+    minimal: { engine: 'vocal', style: 'pulse', sliders: { density: 0.20, variation: 0.30 }, tip: 'Minimal hook — two or three notes that stick. Less is more.' },
   },
   chord: {
-    french:  { engine: 'riff', style: 'filter', voicing: 'wide', extensions: 'seven', tip: 'House-piano: m7-stabs, sidechain mot kick. Daft Punk-skolan. 118–126 BPM.' },
-    disco:   { engine: 'riff', style: 'dance', voicing: 'spread', extensions: 'seven', sliders: { syncopation: 0.50 }, tip: 'Disco-stabs: 7:or på off-beats. Strings eller clavinet. 110–122 BPM.' },
-    rock:    { engine: 'riff', style: 'rock', voicing: 'compact', extensions: 'none', sliders: { length: 0.30, syncopation: 0.25 }, tip: 'Power-stabs — råa treklanger. Distad gitarr eller orgel.' },
-    reggae:  { engine: 'riff', style: 'reggae', voicing: 'compact', extensions: 'none', sliders: { density: 0.25, syncopation: 0.90, length: 0.15, register: 0.60 }, tip: 'Skank: torra stabs på off-beats. Gitarr/orgel, kort och tight. Para med Reggae-bas. 70–90 BPM.' },
-    latin:   { engine: 'riff', style: 'latin', voicing: 'compact', extensions: 'seven', sliders: { syncopation: 0.60 }, tip: 'Montuno-komp med 7:or, synkoperat mot clave. Piano. 90–110 BPM.' },
-    baroque: { engine: 'riff', style: 'baroque', voicing: 'compact', extensions: 'none', sliders: { length: 0.50, syncopation: 0.15 }, tip: 'Cembalo-block — continuo-realisering. Funkar även på pluck-synth.' },
-    jazz:    { engine: 'riff', style: 'anthem', voicing: 'wide', extensions: 'thirteenth', sliders: { density: 0.30, length: 0.70, variation: 0.50 }, tip: 'Neo-soul: m13/maj13 utspritt över två oktaver. Rhodes med chorus. D\'Angelo/Glasper. 75–95 BPM.' },
-    synth:   { engine: 'riff', style: 'filter', voicing: 'spread', extensions: 'sus4', sliders: { density: 0.75, length: 0.12 }, tip: 'Trance gate: täta sus4-stabs, kör genom gate/sidechain. Supersaw. 132–142 BPM.' },
-    lofi:    { engine: 'riff', style: 'ambient', voicing: 'compact', extensions: 'ninth', sliders: { density: 0.18, length: 0.85 }, tip: 'Lo-fi keys: m9 i långsamt tempo, tape-wobble + vinylknaster. 70–85 BPM.' },
-    minimal: { engine: 'riff', style: 'pulse', voicing: 'compact', extensions: 'sus2', sliders: { density: 0.25, length: 0.50 }, tip: 'Glesa sus2-stabs — öppet, svävande. Mycket reverb, mycket tålamod.' },
+    french:  { engine: 'riff', style: 'filter', voicing: 'wide', extensions: 'seven', tip: 'House piano: m7 stabs, sidechain against the kick. The Daft Punk school. 118–126 BPM.' },
+    disco:   { engine: 'riff', style: 'dance', voicing: 'spread', extensions: 'seven', sliders: { syncopation: 0.50 }, tip: 'Disco stabs: 7th chords on the off-beats. Strings or clavinet. 110–122 BPM.' },
+    rock:    { engine: 'riff', style: 'rock', voicing: 'compact', extensions: 'none', sliders: { length: 0.30, syncopation: 0.25 }, tip: 'Power stabs — raw triads. Distorted guitar or organ.' },
+    reggae:  { engine: 'riff', style: 'reggae', voicing: 'compact', extensions: 'none', sliders: { density: 0.25, syncopation: 0.90, length: 0.15, register: 0.60 }, tip: 'Skank: dry stabs on the off-beats. Guitar/organ, short and tight. Pair with the Reggae bass. 70–90 BPM.' },
+    latin:   { engine: 'riff', style: 'latin', voicing: 'compact', extensions: 'seven', sliders: { syncopation: 0.60 }, tip: 'Montuno comping with 7ths, syncopated against the clave. Piano. 90–110 BPM.' },
+    baroque: { engine: 'riff', style: 'baroque', voicing: 'compact', extensions: 'none', sliders: { length: 0.50, syncopation: 0.15 }, tip: 'Harpsichord blocks — continuo realization. Works on a plucky synth too.' },
+    jazz:    { engine: 'riff', style: 'anthem', voicing: 'wide', extensions: 'thirteenth', sliders: { density: 0.30, length: 0.70, variation: 0.50 }, tip: 'Neo-soul: m13/maj13 spread across two octaves. Rhodes with chorus. D\'Angelo/Glasper. 75–95 BPM.' },
+    synth:   { engine: 'riff', style: 'filter', voicing: 'spread', extensions: 'sus4', sliders: { density: 0.75, length: 0.12 }, tip: 'Trance gate: dense sus4 stabs through a gate/sidechain. Supersaw. 132–142 BPM.' },
+    lofi:    { engine: 'riff', style: 'ambient', voicing: 'compact', extensions: 'ninth', sliders: { density: 0.18, length: 0.85 }, tip: 'Lo-fi keys: m9 at slow tempo, tape wobble + vinyl crackle. 70–85 BPM.' },
+    minimal: { engine: 'riff', style: 'pulse', voicing: 'compact', extensions: 'sus2', sliders: { density: 0.25, length: 0.50 }, tip: 'Sparse sus2 stabs — open, floating. Lots of reverb, lots of patience.' },
   },
   arp: {
-    french:  { engine: 'arp', pattern: 'updown', sliders: { density: 0.60 }, tip: 'Upp-och-ner-arp i 16-delar. Filtersvep + sidechain. 118–126 BPM.' },
-    disco:   { engine: 'arp', pattern: 'up', sliders: { density: 0.30, length: 0.45 }, tip: 'Stigande 8-dels-arp — strings eller analog synth. Giorgio Moroder-skolan. 110–122 BPM.' },
-    rock:    { engine: 'arp', pattern: 'up', sliders: { density: 0.30, register: 0.35, range: 0.30, length: 0.60 }, tip: 'Brutna ackord på gitarr — fingerspel/clean. Ballad-läge.' },
-    reggae:  { engine: 'arp', pattern: 'up', sliders: { density: 0.30, syncopation: 0.70 }, tip: 'Off-beat-arp: spelar bara på off-beats, som en arpeggierad skank.' },
-    latin:   { engine: 'arp', pattern: 'updown', sliders: { density: 0.60, syncopation: 0.30 }, tip: 'Montuno-arp i 16-delar — piano eller marimba. 90–110 BPM.' },
-    baroque: { engine: 'arp', pattern: 'alberti', sliders: { density: 0.60, length: 0.50 }, tip: 'Alberti-bas / brutna ackord à la Bach-preludium. Cembalo, piano eller pluck. Tidlös.' },
-    jazz:    { engine: 'arp', pattern: 'updown', sliders: { density: 0.30, length: 0.55 }, tip: 'Brutna ackord i 8-delar — komp bakom melodi. Lägg 7:or via ackordföljden (Am7, Dm7...).' },
-    synth:   { engine: 'arp', pattern: 'up', sliders: { density: 0.80, range: 0.70, length: 0.20 }, tip: 'Trance-arp: 16-delar över 2 oktaver. Supersaw + 3/16-delay + sidechain. 132–142 BPM.' },
-    lofi:    { engine: 'arp', pattern: 'down', sliders: { density: 0.30, length: 0.70, variation: 0.30 }, tip: 'Fallande, mjuk arp — harpa/kalimba-känsla över lo-fi-beat.' },
-    minimal: { engine: 'arp', pattern: 'octave', sliders: { density: 0.60, register: 0.45 }, tip: 'Oktav-puls i mellanregister — hypnotisk motor. Plucky mono-synth. 120–130 BPM.' },
+    french:  { engine: 'arp', pattern: 'updown', sliders: { density: 0.60 }, tip: 'Up-and-down 16th arp. Filter sweeps + sidechain. 118–126 BPM.' },
+    disco:   { engine: 'arp', pattern: 'up', sliders: { density: 0.30, length: 0.45 }, tip: 'Rising 8th-note arp — strings or analog synth. The Giorgio Moroder school. 110–122 BPM.' },
+    rock:    { engine: 'arp', pattern: 'up', sliders: { density: 0.30, register: 0.35, range: 0.30, length: 0.60 }, tip: 'Broken chords on guitar — fingerpicked/clean. Ballad mode.' },
+    reggae:  { engine: 'arp', pattern: 'up', sliders: { density: 0.30, syncopation: 0.70 }, tip: 'Off-beat arp: plays only on the off-beats, like an arpeggiated skank.' },
+    latin:   { engine: 'arp', pattern: 'updown', sliders: { density: 0.60, syncopation: 0.30 }, tip: 'Montuno arp in 16ths — piano or marimba. 90–110 BPM.' },
+    baroque: { engine: 'arp', pattern: 'alberti', sliders: { density: 0.60, length: 0.50 }, tip: 'Alberti bass / broken chords à la a Bach prelude. Harpsichord, piano or pluck. Timeless.' },
+    jazz:    { engine: 'arp', pattern: 'updown', sliders: { density: 0.30, length: 0.55 }, tip: 'Broken chords in 8ths — comping behind a melody. Add 7ths via the progression (Am7, Dm7...).' },
+    synth:   { engine: 'arp', pattern: 'up', sliders: { density: 0.80, range: 0.70, length: 0.20 }, tip: 'Trance arp: 16ths across 2 octaves. Supersaw + 3/16 delay + sidechain. 132–142 BPM.' },
+    lofi:    { engine: 'arp', pattern: 'down', sliders: { density: 0.30, length: 0.70, variation: 0.30 }, tip: 'Falling, soft arp — harp/kalimba feel over a lo-fi beat.' },
+    minimal: { engine: 'arp', pattern: 'octave', sliders: { density: 0.60, register: 0.45 }, tip: 'Octave pulse in the mid register — a hypnotic motor. Plucky mono synth. 120–130 BPM.' },
   },
   drums: {
-    french:  { engine: 'drums', drumStyle: 'house', tip: 'House: kick 4x4, clap på 2 & 4, off-beat hats. 120–128 BPM.' },
-    disco:   { engine: 'drums', drumStyle: 'disco', tip: 'Disco: open hat på varje off-beat ("pea soup") + tamburin. 110–122 BPM.' },
-    rock:    { engine: 'drums', drumStyle: 'rock', sliders: { variation: 0.40 }, tip: 'Rakt rock-komp: kick 1 & 3, virvel 2 & 4. Höj Variation för fler fills.' },
-    reggae:  { engine: 'drums', drumStyle: 'onedrop', tip: 'One drop: tyngdpunkten på 3:an (kick + rim ihop), luft på 1:an. 70–90 BPM.' },
-    latin:   { engine: 'drums', drumStyle: 'latin', sliders: { density: 0.60, syncopation: 0.40 }, tip: '3-2 son-clave, congas, cowbell. Lägg ovanpå valfritt komp. 90–115 BPM.' },
-    baroque: { engine: 'drums', drumStyle: 'rock', sliders: { density: 0.35, variation: 0.50 }, tip: 'Barock har inga trummor — det här är ett anakronistiskt rock-komp. Kör tom-fills som pukor, eller skippa.' },
-    jazz:    { engine: 'drums', drumStyle: 'funkbreak', sliders: { density: 0.55, variation: 0.45 }, tip: 'Ghost notes + synkop — närmast swing appen kommer. Swinga 8:orna i DAW:n och lägg ride ovanpå.' },
-    synth:   { engine: 'drums', drumStyle: 'techno', sliders: { density: 0.55, syncopation: 0.30 }, tip: 'Maskinell 16-dels-hihat, hård kick. 125–140 BPM.' },
-    lofi:    { engine: 'drums', drumStyle: 'lofi', tip: 'Lat boom bap: sloppy kick, avslappnad virvel. Lägg swing + vinylknaster. 70–90 BPM.' },
-    minimal: { engine: 'drums', drumStyle: 'techno', sliders: { density: 0.35, variation: 0.15 }, tip: 'Avskalad techno — få element, mycket repetition. 122–132 BPM.' },
+    french:  { engine: 'drums', drumStyle: 'house', tip: 'House: 4-on-the-floor kick, clap on 2 & 4, off-beat hats. 120–128 BPM.' },
+    disco:   { engine: 'drums', drumStyle: 'disco', tip: 'Disco: open hat on every off-beat ("pea soup") + tambourine. 110–122 BPM.' },
+    rock:    { engine: 'drums', drumStyle: 'rock', sliders: { variation: 0.40 }, tip: 'Straight rock beat: kick on 1 & 3, snare on 2 & 4. Raise Variation for more fills.' },
+    reggae:  { engine: 'drums', drumStyle: 'onedrop', tip: 'One drop: the weight lands on beat 3 (kick + rim together), air on beat 1. 70–90 BPM.' },
+    latin:   { engine: 'drums', drumStyle: 'latin', sliders: { density: 0.60, syncopation: 0.40 }, tip: '3-2 son clave, congas, cowbell. Layer on top of any groove. 90–115 BPM.' },
+    baroque: { engine: 'drums', drumStyle: 'rock', sliders: { density: 0.35, variation: 0.50 }, tip: 'The baroque era had no drum kit — this is an anachronistic rock beat. Treat the tom fills as timpani, or skip.' },
+    jazz:    { engine: 'drums', drumStyle: 'funkbreak', sliders: { density: 0.55, variation: 0.45 }, tip: 'Ghost notes + syncopation — the closest this app gets to swing. Swing the 8ths in your DAW and add a ride.' },
+    synth:   { engine: 'drums', drumStyle: 'techno', sliders: { density: 0.55, syncopation: 0.30 }, tip: 'Machine 16th hi-hats, hard kick. 125–140 BPM.' },
+    lofi:    { engine: 'drums', drumStyle: 'lofi', tip: 'Lazy boom bap: sloppy kick, relaxed snare. Add swing + vinyl crackle. 70–90 BPM.' },
+    minimal: { engine: 'drums', drumStyle: 'techno', sliders: { density: 0.35, variation: 0.15 }, tip: 'Stripped-down techno — few elements, lots of repetition. 122–132 BPM.' },
   },
 };
 
 const VOICE_OPTIONS = [
-  { label: 'Oktav ned',                kind: 'parallel', amount: -12 },
-  { label: 'Kvint ned (parallell)',    kind: 'parallel', amount: -7 },
-  { label: 'Ters ned (diatonisk)',     kind: 'diatonic', amount: -2 },
-  { label: 'Ters upp (diatonisk)',     kind: 'diatonic', amount: 2 },
-  { label: 'Kvart upp (diatonisk)',    kind: 'diatonic', amount: 3 },
-  { label: 'Kvint upp (diatonisk)',    kind: 'diatonic', amount: 4 },
-  { label: 'Sext upp (diatonisk)',     kind: 'diatonic', amount: 5 },
-  { label: 'Oktav upp',                kind: 'parallel', amount: 12 },
-  { label: 'Oktav + kvint upp',        kind: 'parallel', amount: 19 },
-  { label: 'Två oktaver upp',          kind: 'parallel', amount: 24 },
+  { label: 'Octave down',              kind: 'parallel', amount: -12 },
+  { label: 'Fifth down (parallel)',    kind: 'parallel', amount: -7 },
+  { label: 'Third down (diatonic)',    kind: 'diatonic', amount: -2 },
+  { label: 'Third up (diatonic)',      kind: 'diatonic', amount: 2 },
+  { label: 'Fourth up (diatonic)',     kind: 'diatonic', amount: 3 },
+  { label: 'Fifth up (diatonic)',      kind: 'diatonic', amount: 4 },
+  { label: 'Sixth up (diatonic)',      kind: 'diatonic', amount: 5 },
+  { label: 'Octave up',                kind: 'parallel', amount: 12 },
+  { label: 'Octave + fifth up',        kind: 'parallel', amount: 19 },
+  { label: 'Two octaves up',           kind: 'parallel', amount: 24 },
 ];
 
-// Kanonisk fördröjning per stämma. Mätt i 16-delssteg (16 steg = 1 takt).
-// Funkar för Bach-fuga och Justice "Heavy Metal"-effekt: röster spelar
-// samma motiv men fasförskjutet.
+// Canonic delay per voice, measured in 16th steps (16 steps = 1 bar).
+// Powers fugue expositions and the Justice "Heavy Metal" effect: voices play
+// the same motif phase-shifted in time.
 const VOICE_DELAYS = [
-  { label: 'samtidig',         steps: 0 },
-  { label: '¼ takt senare',    steps: 4 },
-  { label: '½ takt senare',    steps: 8 },
-  { label: '1 takt senare',    steps: 16 },
-  { label: '2 takter senare',  steps: 32 },
-  { label: '4 takter senare',  steps: 64 },
+  { label: 'simultaneous',   steps: 0 },
+  { label: '¼ bar later',    steps: 4 },
+  { label: '½ bar later',    steps: 8 },
+  { label: '1 bar later',    steps: 16 },
+  { label: '2 bars later',   steps: 32 },
+  { label: '4 bars later',   steps: 64 },
 ];
 
 const STATE = {
-  role: 'bass',          // UI-roll: bass | lead | melody | chord | arp | drums
+  role: 'bass',          // UI role: bass | lead | melody | chord | arp | drums
   genre: 'french',
   engine: 'riff',        // riff | vocal | arp | walking | berlin | drums
-  style: 'genesis',      // corpus-DNA för riff/vocal-motorerna
-  pattern: 'up',         // arp-mönster
-  acid: false,           // 303-slides på/av
+  style: 'genesis',      // corpus DNA for the riff/vocal engines
+  pattern: 'up',         // arp pattern
+  acid: false,           // 303 slides on/off
   voicing: 'compact',
   extensions: 'none',
   drumStyle: null,
@@ -286,7 +286,7 @@ function applyCombo(roleId, genreId, { audition = false } = {}) {
 
   if (audition) {
     generate();
-    play();   // chip-klicket är en user-gesture, så ljudet får starta
+    play();   // the chip click is a user gesture, so audio is allowed to start
   }
 }
 
@@ -296,7 +296,7 @@ function comboLabel() {
   return `${g} · ${r}`;
 }
 
-// Layout-säkring: hide controls that don't apply to the current role so the UI
+// Layout guard: hide controls that don't apply to the current role so the UI
 // never shows knobs that silently do nothing.
 //  - drums: no key/scale, no chord progression, no voices, no pitch-related sliders
 //  - others: everything visible
@@ -347,7 +347,7 @@ function renderVoices() {
   // Keep the collapsed-summary counter in sync, and pop the panel open when
   // voices exist so active settings are never hidden.
   const counter = document.getElementById('voice-count');
-  if (counter) counter.textContent = STATE.voices.length ? `${STATE.voices.length} aktiva` : '';
+  if (counter) counter.textContent = STATE.voices.length ? `${STATE.voices.length} active` : '';
   const panel = document.getElementById('panel-voices');
   if (panel && STATE.voices.length > 0) panel.open = true;
   STATE.voices.forEach((voice, idx) => {
@@ -355,12 +355,12 @@ function renderVoices() {
     row.className = 'voice-row';
     row.innerHTML = `
       <span class="voice-num">${idx + 1}</span>
-      <label>Intervall
+      <label>Interval
         <select data-voice-interval="${idx}">
           ${VOICE_OPTIONS.map((o, i) => `<option value="${i}" ${i === voice.optionIndex ? 'selected' : ''}>${o.label}</option>`).join('')}
         </select>
       </label>
-      <label>Fördröjning
+      <label>Delay
         <select data-voice-delay="${idx}">
           ${VOICE_DELAYS.map((d, i) => `<option value="${i}" ${i === (voice.delayIndex ?? 0) ? 'selected' : ''}>${d.label}</option>`).join('')}
         </select>
@@ -465,7 +465,7 @@ function generate() {
     });
     STATE.currentResult = { main: result, voices: [], bars: ui.bars, bpm: ui.bpm, isDrums: true };
     document.getElementById('seed-display').textContent =
-      `seed: ${seed.toString(16).padStart(8, '0')}   ·   ${ui.bars} takter @ ${ui.bpm} bpm   ·   ${comboLabel()}`;
+      `seed: ${seed.toString(16).padStart(8, '0')}   ·   ${ui.bars} bars @ ${ui.bpm} bpm   ·   ${comboLabel()}`;
     renderPianoRoll();
     return;
   }
@@ -556,7 +556,7 @@ function generate() {
   };
 
   document.getElementById('seed-display').textContent =
-    `seed: ${seed.toString(16).padStart(8, '0')}   ·   ${ui.rootName} ${ui.scaleName}   ·   ${ui.bars} takter @ ${ui.bpm} bpm   ·   ${comboLabel()}`;
+    `seed: ${seed.toString(16).padStart(8, '0')}   ·   ${ui.rootName} ${ui.scaleName}   ·   ${ui.bars} bars @ ${ui.bpm} bpm   ·   ${comboLabel()}`;
 
   renderPianoRoll();
 }
@@ -882,7 +882,7 @@ function download() {
       { name: 'Riff', channel: 0, program: 81, notes: main.notes }, // 81 = Lead 1 (square)
     ];
     voices.forEach((v, i) => {
-      tracks.push({ name: `Stämma ${i + 1}`, channel: i + 1, program: 80, notes: v });
+      tracks.push({ name: `Voice ${i + 1}`, channel: i + 1, program: 80, notes: v });
     });
     const ui = readUI();
     filename = `riff_${ui.rootName.replace('#', 's')}_${ui.scaleName}_${STATE.genre}_${STATE.role}_${seedHex}.mid`;

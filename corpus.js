@@ -74,14 +74,14 @@ const RIFF_FRAGMENTS = [
   { style: 'ambient', steps: [4, 5, 7, 5, 4, 2, 0, 2] },
 
   // ---- Baroque / Bach-fugue subjects / Justice "Heavy Metal" ----
-  // Karakteristiska: stegvis moll/frygisk, leap up + descend, sequential motion
-  { style: 'baroque', steps: [0, -2, -3, -5, -3, -2, 0, 2] },   // moll-deklamation
-  { style: 'baroque', steps: [0, 2, 3, 4, 3, 2, 0, -2] },        // upp + ner steg
+  // Characteristics: stepwise minor/phrygian, leap up + descend, sequential motion
+  { style: 'baroque', steps: [0, -2, -3, -5, -3, -2, 0, 2] },   // minor declamation
+  { style: 'baroque', steps: [0, 2, 3, 4, 3, 2, 0, -2] },        // up + down steps
   { style: 'baroque', steps: [0, -3, -5, -3, -1, -3, -5, -7] },  // descending
   { style: 'baroque', steps: [0, 4, 3, 2, 0, -2, -3, -5] },      // leap-then-fall
   { style: 'baroque', steps: [4, 5, 4, 2, 0, 2, 4, 3] },         // upper-voice
-  { style: 'baroque', steps: [0, 2, 4, 3, 2, 4, 3, 2] },         // sekvens
-  { style: 'baroque', steps: [-3, -2, 0, -2, -3, -5, -3, -7] },  // ledtoner
+  { style: 'baroque', steps: [0, 2, 4, 3, 2, 4, 3, 2] },         // sequence
+  { style: 'baroque', steps: [-3, -2, 0, -2, -3, -5, -3, -7] },  // leading tones
 
   // ---- Rock / pentatonic power-riff (root-heavy, b7 hooks) ----
   { style: 'rock', steps: [0, 0, 3, 0, 4, 0, 3, 2] },
@@ -141,13 +141,13 @@ const STYLE_RHYTHM_WEIGHTS = {
   topline: { A: 5, B: 6, C: 2, D: 2, E: 2, F: 2, G: 1, H: 2, I: 3, J: 2, K: 2 },
   // Ambient — mostly rests with sparse onsets
   ambient: { A: 6, B: 2, C: 2, D: 1, E: 1, F: 1, G: 1, H: 1, I: 7, J: 1, K: 1 },
-  // Baroque — stadig 8-dels och 16-delsdriv, måttlig synkop
+  // Baroque — steady 8th/16th drive, moderate syncopation
   baroque: { A: 4, B: 5, C: 2, D: 4, E: 4, F: 3, G: 3, H: 2, I: 1, J: 3, K: 3 },
-  // Rock — driv på 8-delar, raka betoningar
+  // Rock — 8th-note drive, straight accents
   rock:    { A: 5, B: 7, C: 2, D: 3, E: 3, F: 2, G: 2, H: 1, I: 1, J: 3, K: 1 },
-  // Reggae — off-beat-lett (one drop), gott om luft
+  // Reggae — off-beat-led (one drop), plenty of air
   reggae:  { A: 2, B: 2, C: 7, D: 1, E: 2, F: 1, G: 1, H: 6, I: 4, J: 3, K: 2 },
-  // Latin — synkoperat, clave-känsla
+  // Latin — syncopated, clave feel
   latin:   { A: 2, B: 3, C: 3, D: 3, E: 5, F: 4, G: 2, H: 3, I: 1, J: 6, K: 4 },
 };
 
@@ -256,11 +256,11 @@ const GM = {
 };
 
 const DRUM_LABELS = {
-  36: 'Kick', 38: 'Virvel', 39: 'Clap', 37: 'Rimshot',
+  36: 'Kick', 38: 'Snare', 39: 'Clap', 37: 'Rimshot',
   42: 'Hi-hat', 46: 'Open hat', 51: 'Ride', 49: 'Crash',
-  45: 'Tom låg', 47: 'Tom mid', 50: 'Tom hög',
-  54: 'Tamburin', 56: 'Cowbell', 70: 'Shaker', 75: 'Clave',
-  63: 'Conga öppen', 62: 'Conga slap',
+  45: 'Low tom', 47: 'Mid tom', 50: 'High tom',
+  54: 'Tambourine', 56: 'Cowbell', 70: 'Shaker', 75: 'Clave',
+  63: 'Open conga', 62: 'Slap conga',
 };
 
 // Each style: { [gmPitch]: { prob: number[16], vel: number, ghost?: boolean } }
@@ -308,7 +308,7 @@ const DRUM_STYLES = {
     [GM.SHAKER]:     { prob: [.8,.4,.8,.4, .8,.4,.8,.4, .8,.4,.8,.4, .8,.4,.8,.4], vel: 56, ghost: true },
     [GM.KICK]:       { prob: [0,0,0,0, 0,0,.5,0, 0,0,0,0, 0,0,.8,0], vel: 100 },
   },
-  // Reggae one drop: tyngdpunkten på 3:an (kick + rim ihop), luft på 1:an.
+  // Reggae one drop: the weight lands on beat 3 (kick + rim together), air on beat 1.
   onedrop: {
     [GM.KICK]:   { prob: [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0], vel: 110 },
     [GM.RIM]:    { prob: [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0], vel: 95 },
@@ -316,7 +316,7 @@ const DRUM_STYLES = {
     [GM.OHAT]:   { prob: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,.4,0], vel: 78 },
     [GM.SHAKER]: { prob: [.3,.3,.3,.3, .3,.3,.3,.3, .3,.3,.3,.3, .3,.3,.3,.3], vel: 50, ghost: true },
   },
-  // Lo-fi boom bap: lat kick, snare strax efter 2/4-känslan, glesa hats.
+  // Lo-fi boom bap: lazy kick, relaxed snare around 2/4, sparse hats.
   lofi: {
     [GM.KICK]:   { prob: [1,0,0,.25, 0,0,.4,0, .6,0,.3,0, 0,0,0,0], vel: 100 },
     [GM.SNARE]:  { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,.2], vel: 88 },

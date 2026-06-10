@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bundle riffgen into a single self-contained riffgen.html.
+"""Bundle MidiGen into a single self-contained midigen.html.
 
 Inlines style.css and all local JS files. Tone.js is kept as a CDN link
 (too large to inline practically). The result is one HTML file that you
@@ -14,7 +14,7 @@ ROOT = Path(__file__).parent
 JS_ORDER = ['theory.js', 'midi.js', 'corpus.js', 'generator.js', 'app.js']
 CSS_FILE = 'style.css'
 INPUT = 'index.html'
-OUTPUT = 'riffgen.html'
+OUTPUT = 'midigen.html'
 
 def main():
     html = (ROOT / INPUT).read_text(encoding='utf-8')

@@ -1,31 +1,43 @@
-# riffgen.
+# MidiGen
 
-Musikalisk MIDI-generator i webbläsaren — single-note-riff, basgångar, melodier,
-ackord-riff, fugor och trummor. 
+Musical MIDI generator in the browser — riffs, basslines, melodies, chord
+stabs, fugues and drums. Everything is generated locally, no server needed.
 
-**33 stilar** i 7 kategorier: Bas, Lead, Arp, Ackord-riff, Melodi, Polyfoni, Trummor.
-Exporterar standard-MIDI (.mid) som importeras direkt i Ableton, Logic, FL Studio m.fl.
-Trummor exporteras på kanal 10 enligt General MIDI.
+Pick **what** you're writing (Bass, Lead, Melody, Chords, Arp, Drums) and a
+**feel** (French house, Disco, Rock, Reggae, Latin, Baroque, Jazz/Soul,
+Synth/Trance, Lo-fi, Minimal) — 60 combinations, each with its own engine and
+sound-design tip. Exports standard MIDI (.mid) that imports directly into
+Ableton, Logic, FL Studio and more. Drums export on channel 10 (General MIDI).
 
-## Kör lokalt
+**Live:** <https://vnasman.github.io/MidiGen/>
 
-Öppna `riffgen.html` direkt i webbläsaren (allt-i-en-fil), eller servera mappen:
+## Run locally
+
+Open `midigen.html` directly in a browser (all-in-one file), or serve the folder:
 
 ```bash
 python3 -m http.server 8765
 # → http://localhost:8765
 ```
 
-## Filstruktur
+## Update the published version
 
-| Fil | Roll |
+```bash
+./deploy.sh "what you changed"
+```
+
+Rebuilds the bundle, commits and pushes — GitHub Pages updates within a minute.
+
+## File structure
+
+| File | Role |
 |---|---|
-| `index.html` | UI-struktur |
-| `style.css` | Tema (ljust, violett accent) |
-| `theory.js` | Skalor + ackordparser |
-| `corpus.js` | Riff-fragment, rytmceller, trummönster, frasstrukturer |
-| `generator.js` | Riff-/trum-generering (Markov + mallar) |
-| `midi.js` | Standard MIDI File-skrivare (inga beroenden) |
-| `app.js` | UI-logik, Tone.js-uppspelning, pianorulle |
-| `build.py` | Bundlar allt till `riffgen.html` (en delbar fil) |
-| `deploy.sh` | Bygg + commit + push i ett steg |
+| `index.html` | UI structure |
+| `style.css` | Theme (light, violet accent) |
+| `theory.js` | Scales + chord parser |
+| `corpus.js` | Riff fragments, rhythm cells, drum patterns, phrase structures |
+| `generator.js` | Engines: Markov riffs, vocal melodies, arpeggiator, walking bass, Berlin school, drums |
+| `midi.js` | Standard MIDI File writer (no dependencies) |
+| `app.js` | UI logic, Tone.js playback, piano roll |
+| `build.py` | Bundles everything into `midigen.html` (one shareable file) |
+| `deploy.sh` | Build + commit + push in one step |

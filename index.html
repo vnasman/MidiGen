@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Riffgen — musikalisk MIDI-generator</title>
+  <title>MidiGen — musical MIDI generator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -11,38 +11,38 @@
 </head>
 <body>
   <header>
-    <h1>riffgen<span class="dot">.</span></h1>
-    <p class="subtitle">Skapa musikaliska single-note-riff, basgångar och melodier som MIDI</p>
+    <h1>Midi<span class="dot">Gen</span></h1>
+    <p class="subtitle">Generate musical riffs, basslines, melodies and drums as MIDI</p>
   </header>
 
   <main>
     <section class="panel">
-      <h2>Musik</h2>
+      <h2>Music</h2>
       <div class="grid">
-        <label>Grundton
+        <label>Root
           <select id="root">
             <option>C</option><option>C#</option><option>D</option><option>D#</option>
             <option>E</option><option>F</option><option>F#</option><option>G</option>
             <option>G#</option><option selected>A</option><option>A#</option><option>B</option>
           </select>
         </label>
-        <label>Skala
+        <label>Scale
           <select id="scale">
-            <option value="minor" selected>Moll (naturlig)</option>
-            <option value="harmonic-minor">Harmonisk moll</option>
-            <option value="melodic-minor">Melodisk moll</option>
-            <option value="phrygian">Frygisk</option>
-            <option value="dorian">Dorisk</option>
-            <option value="major">Dur</option>
-            <option value="mixolydian">Mixolydisk</option>
-            <option value="lydian">Lydisk</option>
-            <option value="locrian">Lokrisk</option>
-            <option value="minor-pent">Mollpentatonisk</option>
-            <option value="major-pent">Durpentatonisk</option>
+            <option value="minor" selected>Minor (natural)</option>
+            <option value="harmonic-minor">Harmonic minor</option>
+            <option value="melodic-minor">Melodic minor</option>
+            <option value="phrygian">Phrygian</option>
+            <option value="dorian">Dorian</option>
+            <option value="major">Major</option>
+            <option value="mixolydian">Mixolydian</option>
+            <option value="lydian">Lydian</option>
+            <option value="locrian">Locrian</option>
+            <option value="minor-pent">Minor pentatonic</option>
+            <option value="major-pent">Major pentatonic</option>
             <option value="blues">Blues</option>
           </select>
         </label>
-        <label>Antal takter
+        <label>Bars
           <select id="bars">
             <option>2</option><option value="4" selected>4</option><option>8</option><option>16</option>
           </select>
@@ -52,58 +52,58 @@
         </label>
       </div>
       <div id="panel-progression" class="prog-row">
-        <label>Ackordföljd <span class="optional">(valfritt)</span>
+        <label>Chord progression <span class="optional">(optional)</span>
           <div class="row">
-            <input type="text" id="progression" placeholder="t.ex.  i VI III VII  eller  Am F C G">
-            <button id="clear-prog" class="ghost">Rensa</button>
+            <input type="text" id="progression" placeholder="e.g.  i VI III VII  or  Am F C G">
+            <button id="clear-prog" class="ghost">Clear</button>
           </div>
         </label>
       </div>
     </section>
 
     <section class="panel">
-      <h2>Stil</h2>
+      <h2>Style</h2>
       <div class="preset-picker">
         <div class="chip-row">
-          <span class="chip-row-label">Vad</span>
+          <span class="chip-row-label">What</span>
           <div class="chips" id="role-chips"></div>
         </div>
         <div class="chip-row">
-          <span class="chip-row-label">Känsla</span>
+          <span class="chip-row-label">Feel</span>
           <div class="chips" id="genre-chips"></div>
         </div>
         <div id="extensions-wrap" class="extensions-wrap" style="display:none">
           <label class="preset-label">
-            Ackord-typ
+            Chord type
             <select id="extensions-select"></select>
           </label>
         </div>
         <div id="preset-tip" class="preset-tip"></div>
       </div>
       <details class="tweaks" id="tweaks">
-        <summary>Finjustering</summary>
+        <summary>Fine-tune</summary>
         <div class="controls" id="sliders"></div>
       </details>
     </section>
 
     <details class="panel collapsible" id="panel-voices">
-      <summary><span class="summary-title">Stämmor</span> <span class="summary-meta" id="voice-count"></span></summary>
+      <summary><span class="summary-title">Harmony voices</span> <span class="summary-meta" id="voice-count"></span></summary>
       <div id="voices"></div>
-      <button id="add-voice" class="ghost">+ Lägg till stämma</button>
-      <p class="hint">Stämmor läggs till över/under huvudriffet. Diatonisk = snäpper till skalan. Parallell = bokstavlig transponering.</p>
+      <button id="add-voice" class="ghost">+ Add voice</button>
+      <p class="hint">Voices are layered above/below the main riff. Diatonic = snaps to the scale. Parallel = literal transposition.</p>
     </details>
 
     <section class="actions">
       <button id="random" class="big primary">🎲 RANDOM</button>
-      <button id="generate" class="big">Generera</button>
-      <button id="play" class="big">▶ Spela</button>
-      <button id="stop" class="big">■ Stopp</button>
+      <button id="generate" class="big">Generate</button>
+      <button id="play" class="big">▶ Play</button>
+      <button id="stop" class="big">■ Stop</button>
       <button id="download" class="big">⤓ MIDI</button>
     </section>
 
     <section class="panel">
       <div class="row between">
-        <h2>Förhandsvisning</h2>
+        <h2>Preview</h2>
         <div class="seed" id="seed-display"></div>
       </div>
       <div id="piano-roll" class="piano-roll"></div>
@@ -111,7 +111,7 @@
   </main>
 
   <footer>
-    <p>Hela genereringen sker lokalt i din webbläsare. MIDI-filer kan importeras i Ableton, Logic, FL Studio m.fl.</p>
+    <p>Everything is generated locally in your browser. MIDI files import directly into Ableton, Logic, FL Studio and more.</p>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/tone@14.8.49/build/Tone.js"></script>
