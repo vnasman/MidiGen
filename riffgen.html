@@ -1,0 +1,2827 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Riffgen — musikalisk MIDI-generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+:root {
+  --bg: #fafaf7;
+  --bg-soft: #f4f4f0;
+  --panel: #ffffff;
+  --border: #ececea;
+  --border-strong: #d8d8d4;
+
+  --text: #1a1a1f;
+  --text-muted: #6b6b73;
+  --text-dim: #a5a5ad;
+
+  --accent: #6d28d9;
+  --accent-bright: #8b5cf6;
+  --accent-soft: #f3effd;
+  --accent-on: #ffffff;
+
+  --harmony: #0d9488;
+  --good: #10b981;
+  --danger: #e11d48;
+
+  --shadow-xs: 0 1px 2px rgba(20, 20, 30, 0.04);
+  --shadow-sm: 0 2px 6px rgba(20, 20, 30, 0.05);
+  --shadow-md: 0 6px 20px rgba(20, 20, 30, 0.06), 0 2px 4px rgba(20, 20, 30, 0.03);
+
+  --radius: 14px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  color: var(--text);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'cv02', 'cv03', 'cv11';
+  min-height: 100vh;
+}
+
+/* ── Header ───────────────────────────────────────── */
+header {
+  padding: 64px 24px 8px;
+  text-align: center;
+}
+
+header h1 {
+  font-size: 36px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -1px;
+  color: var(--text);
+}
+
+header h1 .dot {
+  color: var(--accent);
+}
+
+header .subtitle {
+  color: var(--text-muted);
+  margin: 10px 0 36px;
+  font-size: 15px;
+  font-weight: 400;
+}
+
+/* ── Layout ───────────────────────────────────────── */
+main {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 24px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  box-shadow: var(--shadow-xs);
+}
+
+.panel h2 {
+  margin: 0 0 18px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+}
+
+.panel h2 .optional {
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-dim);
+  font-weight: 400;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.row.between { justify-content: space-between; }
+.row input[type="text"] { flex: 1; }
+
+.hint {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ── Inputs & Labels ──────────────────────────────── */
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+select, input[type="text"], input[type="number"] {
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  padding: 11px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 400;
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+}
+
+select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%236b6b73' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 36px;
+}
+
+select:focus, input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+input::placeholder { color: var(--text-dim); }
+
+/* ── Buttons ──────────────────────────────────────── */
+button {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, transform 0.05s, box-shadow 0.12s;
+}
+
+button:hover {
+  background: var(--bg-soft);
+  border-color: var(--text-dim);
+}
+button:active { transform: translateY(1px); }
+
+button.ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+button.ghost:hover {
+  background: var(--bg-soft);
+  color: var(--text);
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-on);
+  box-shadow: var(--shadow-sm);
+}
+button.primary:hover {
+  background: var(--accent-bright);
+  border-color: var(--accent-bright);
+  box-shadow: var(--shadow-md);
+}
+
+button.big {
+  padding: 13px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+/* ── Preset picker ────────────────────────────────── */
+.preset-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.preset-label select {
+  font-size: 15px;
+  font-weight: 500;
+  padding: 13px 38px 13px 14px;
+}
+
+.preset-tip {
+  background: var(--accent-soft);
+  border-left: 3px solid var(--accent);
+  padding: 14px 18px;
+  border-radius: var(--radius-xs);
+  font-size: 13.5px;
+  color: var(--text);
+  line-height: 1.6;
+}
+.preset-tip:empty { display: none; }
+
+/* ── Sliders ──────────────────────────────────────── */
+.sliders {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.slider {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.slider label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.slider label > span:first-child > span {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-left: 6px;
+}
+
+.slider label .value {
+  font-size: 12px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--panel);
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.12);
+  box-shadow: var(--shadow-sm);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--panel);
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+}
+
+/* ── Voices ───────────────────────────────────────── */
+#voices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.voice-row {
+  display: grid;
+  grid-template-columns: auto 1.3fr 1fr 0.7fr auto;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-soft);
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+@media (max-width: 640px) {
+  .voice-row {
+    grid-template-columns: auto 1fr 1fr auto;
+    grid-template-areas:
+      "num intervall delay remove"
+      "num velocity velocity remove";
+    row-gap: 8px;
+  }
+  .voice-row .voice-num { grid-area: num; }
+  .voice-row label:nth-of-type(1) { grid-area: intervall; }
+  .voice-row label:nth-of-type(2) { grid-area: delay; }
+  .voice-row label:nth-of-type(3) { grid-area: velocity; }
+  .voice-row .remove-voice { grid-area: remove; }
+}
+
+.voice-row .voice-num {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 700;
+  width: 22px;
+  font-variant-numeric: tabular-nums;
+}
+
+.voice-row label {
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+.voice-row select {
+  font-size: 13.5px;
+  background-color: var(--panel);
+  padding: 8px 30px 8px 12px;
+}
+
+.voice-row .remove-voice {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 20px;
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
+}
+.voice-row .remove-voice:hover {
+  color: var(--danger);
+  background: rgba(225, 29, 72, 0.08);
+}
+
+/* ── Actions ──────────────────────────────────────── */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  padding: 8px 0 0;
+}
+
+/* ── Piano roll ───────────────────────────────────── */
+.seed {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+  font-weight: 400;
+}
+
+.piano-roll {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  min-height: 200px;
+  padding: 14px;
+  overflow: hidden;
+}
+
+.piano-roll svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.piano-roll .gridline {
+  stroke: #ececea;
+}
+.piano-roll .gridline-beat {
+  stroke: #d8d8d4;
+}
+.piano-roll .gridline-bar {
+  stroke: #a5a5ad;
+}
+.piano-roll .note {
+  fill: var(--accent);
+  rx: 2;
+}
+.piano-roll .note.harm {
+  fill: var(--harmony);
+  opacity: 0.85;
+}
+.piano-roll .drum-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  fill: var(--text-muted);
+}
+
+/* ── Footer ───────────────────────────────────────── */
+footer {
+  text-align: center;
+  padding: 24px 24px 48px;
+  color: var(--text-dim);
+  font-size: 12.5px;
+}
+
+/* ── Responsive tweaks ────────────────────────────── */
+@media (max-width: 600px) {
+  header { padding: 40px 16px 4px; }
+  header h1 { font-size: 28px; }
+  main { padding: 0 16px 40px; gap: 12px; }
+  .panel { padding: 18px 20px; }
+}
+
+</style>
+</head>
+<body>
+  <header>
+    <h1>riffgen<span class="dot">.</span></h1>
+    <p class="subtitle">Skapa musikaliska single-note-riff, basgångar och melodier som MIDI</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Tonart & form</h2>
+      <div class="grid">
+        <label>Grundton
+          <select id="root">
+            <option>C</option><option>C#</option><option>D</option><option>D#</option>
+            <option>E</option><option>F</option><option>F#</option><option>G</option>
+            <option>G#</option><option selected>A</option><option>A#</option><option>B</option>
+          </select>
+        </label>
+        <label>Skala
+          <select id="scale">
+            <option value="minor" selected>Moll (naturlig)</option>
+            <option value="harmonic-minor">Harmonisk moll</option>
+            <option value="melodic-minor">Melodisk moll</option>
+            <option value="phrygian">Frygisk</option>
+            <option value="dorian">Dorisk</option>
+            <option value="major">Dur</option>
+            <option value="mixolydian">Mixolydisk</option>
+            <option value="lydian">Lydisk</option>
+            <option value="locrian">Lokrisk</option>
+            <option value="minor-pent">Mollpentatonisk</option>
+            <option value="major-pent">Durpentatonisk</option>
+            <option value="blues">Blues</option>
+          </select>
+        </label>
+        <label>Antal takter
+          <select id="bars">
+            <option>2</option><option value="4" selected>4</option><option>8</option><option>16</option>
+          </select>
+        </label>
+        <label>BPM
+          <input type="number" id="bpm" value="124" min="40" max="220">
+        </label>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-progression">
+      <h2>Ackordföljd <span class="optional">(valfritt)</span></h2>
+      <div class="row">
+        <input type="text" id="progression" placeholder="t.ex.  i  VI  III  VII   eller   Am F C G   eller   i / VII / VI / VII">
+        <button id="clear-prog" class="ghost">Rensa</button>
+      </div>
+      <p class="hint">Romerska siffror (i, V, ♭VII, VImaj7) eller ackordnamn (Am, F#m7). En per takt — färre ackord sträcks ut.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Stil</h2>
+      <div class="preset-picker">
+        <label class="preset-label">
+          Välj stil
+          <select id="preset-select"></select>
+        </label>
+        <div id="extensions-wrap" class="extensions-wrap" style="display:none">
+          <label class="preset-label">
+            Ackord-typ
+            <select id="extensions-select"></select>
+          </label>
+        </div>
+        <div id="preset-tip" class="preset-tip"></div>
+      </div>
+      <div class="sliders" id="sliders">
+        <!-- populated by app.js -->
+      </div>
+    </section>
+
+    <section class="panel" id="panel-voices">
+      <h2>Stämmor</h2>
+      <div id="voices"></div>
+      <button id="add-voice" class="ghost">+ Lägg till stämma</button>
+      <p class="hint">Stämmor läggs till över/under huvudriffet. Diatonisk = snäpper till skalan. Parallell = bokstavlig transponering (kromatisk).</p>
+    </section>
+
+    <section class="actions">
+      <button id="random" class="big primary">🎲 RANDOM</button>
+      <button id="generate" class="big">Generera</button>
+      <button id="play" class="big">▶ Spela</button>
+      <button id="stop" class="big">■ Stopp</button>
+      <button id="download" class="big">⤓ MIDI</button>
+    </section>
+
+    <section class="panel">
+      <div class="row between">
+        <h2>Förhandsvisning</h2>
+        <div class="seed" id="seed-display"></div>
+      </div>
+      <div id="piano-roll" class="piano-roll"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Hela genereringen sker lokalt i din webbläsare. MIDI-filer kan importeras i Ableton, Logic, FL Studio m.fl.</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/tone@14.8.49/build/Tone.js"></script>
+<script>
+// ===== theory.js =====
+
+// Music theory: scales, key handling, chord parsing.
+// All notes represented as MIDI numbers (C-1 = 0, middle C = 60).
+
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const NOTE_NAMES_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+const SCALES = {
+  'major':          [0, 2, 4, 5, 7, 9, 11],
+  'minor':          [0, 2, 3, 5, 7, 8, 10],
+  'harmonic-minor': [0, 2, 3, 5, 7, 8, 11],
+  'melodic-minor':  [0, 2, 3, 5, 7, 9, 11],
+  'dorian':         [0, 2, 3, 5, 7, 9, 10],
+  'phrygian':       [0, 1, 3, 5, 7, 8, 10],
+  'lydian':         [0, 2, 4, 6, 7, 9, 11],
+  'mixolydian':     [0, 2, 4, 5, 7, 9, 10],
+  'locrian':        [0, 1, 3, 5, 6, 8, 10],
+  'minor-pent':     [0, 3, 5, 7, 10],
+  'major-pent':     [0, 2, 4, 7, 9],
+  'blues':          [0, 3, 5, 6, 7, 10],
+};
+
+function pitchClassFromName(name) {
+  const idx = NOTE_NAMES.indexOf(name);
+  if (idx >= 0) return idx;
+  const flatIdx = NOTE_NAMES_FLAT.indexOf(name);
+  if (flatIdx >= 0) return flatIdx;
+  return -1;
+}
+
+function midiToName(midi) {
+  const name = NOTE_NAMES[midi % 12];
+  const octave = Math.floor(midi / 12) - 1;
+  return `${name}${octave}`;
+}
+
+// --- Chord progression parser ---
+// Supports roman numerals (i, V, ♭VII, VImaj7) and chord names (Am, F#m7, Cmaj7, G/B).
+// Returns an array of { root: midi, pitchClasses: [pc...], label: string } per chord.
+
+const ROMAN_DEGREES = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii'];
+
+function parseProgression(text, tonicMidi, scaleIntervals) {
+  if (!text || !text.trim()) return [];
+  const tokens = text.replace(/\|/g, ' ').split(/\s+/).filter(t => t && t !== '/');
+  const chords = [];
+  for (const t of tokens) {
+    const c = parseChordToken(t, tonicMidi, scaleIntervals);
+    if (c) chords.push(c);
+  }
+  return chords;
+}
+
+function parseChordToken(token, tonicMidi, scaleIntervals) {
+  let body = token.trim();
+  if (!body) return null;
+  let chromaShift = 0;
+  while (body.startsWith('b') || body.startsWith('♭')) { chromaShift -= 1; body = body.slice(1); }
+  while (body.startsWith('#') || body.startsWith('♯')) { chromaShift += 1; body = body.slice(1); }
+
+  // Roman numeral form
+  const romanMatch = body.match(/^(VII|vii|VI|vi|IV|iv|III|iii|II|ii|V|v|I|i)(°|dim|m|maj7|M7|7|sus2|sus4)?(.*)?$/);
+  if (romanMatch) {
+    const numeral = romanMatch[1];
+    const suffix = (romanMatch[2] || '') + (romanMatch[3] || '');
+    const isLower = numeral === numeral.toLowerCase();
+    const degreeIdx = ROMAN_DEGREES.indexOf(numeral.toLowerCase());
+    const tonicPc = tonicMidi % 12;
+    const scalePc = (tonicPc + (scaleIntervals[degreeIdx] ?? 0) + chromaShift + 12) % 12;
+    const rootMidi = (Math.floor(tonicMidi / 12)) * 12 + scalePc;
+    let quality = isLower ? 'm' : 'M';
+    if (suffix.startsWith('°') || suffix.startsWith('dim')) quality = 'dim';
+    return buildChord(rootMidi, quality, suffix, token);
+  }
+
+  // Letter-name form
+  const noteMatch = body.match(/^([A-G])([#b♭♯]?)(.*)$/);
+  if (noteMatch) {
+    let name = noteMatch[1] + (noteMatch[2] === '♭' ? 'b' : noteMatch[2] === '♯' ? '#' : (noteMatch[2] || ''));
+    let pc = pitchClassFromName(name);
+    if (pc < 0) return null;
+    pc = ((pc + chromaShift) + 12) % 12;
+    const suffix = noteMatch[3] || '';
+    let quality = 'M';
+    if (suffix.startsWith('m') && !suffix.startsWith('maj')) quality = 'm';
+    if (suffix.startsWith('dim') || suffix.startsWith('°')) quality = 'dim';
+    if (suffix.startsWith('aug') || suffix.startsWith('+')) quality = 'aug';
+    const rootMidi = (Math.floor(tonicMidi / 12)) * 12 + pc;
+    return buildChord(rootMidi, quality, suffix, token);
+  }
+
+  return null;
+}
+
+function buildChord(rootMidi, quality, suffix, label) {
+  let intervals;
+  switch (quality) {
+    case 'm':   intervals = [0, 3, 7]; break;
+    case 'dim': intervals = [0, 3, 6]; break;
+    case 'aug': intervals = [0, 4, 8]; break;
+    default:    intervals = [0, 4, 7];
+  }
+  if (suffix.includes('sus2')) intervals = [0, 2, 7];
+  if (suffix.includes('sus4')) intervals = [0, 5, 7];
+  if (suffix.includes('maj7') || suffix.includes('M7')) intervals.push(11);
+  else if (suffix.includes('7')) intervals.push(10);
+  if (suffix.includes('9')) intervals.push(14);
+  if (suffix.includes('add9')) intervals.push(14);
+
+  const pitchClasses = intervals.map(i => ((rootMidi + i) % 12 + 12) % 12);
+  return { root: rootMidi, intervals, pitchClasses, label };
+}
+
+
+
+// ===== midi.js =====
+
+// MIDI Standard MIDI File (SMF) Type 1 writer.
+// Pure-JS, no dependencies. Produces a Blob suitable for download.
+
+const PPQ = 480; // ticks per quarter
+
+function vlq(n) {
+  // Variable-length quantity encoding (big-endian, MSB-first, continuation bit on all but last).
+  if (n < 0) n = 0;
+  const out = [n & 0x7F];
+  n >>= 7;
+  while (n > 0) {
+    out.unshift((n & 0x7F) | 0x80);
+    n >>= 7;
+  }
+  return out;
+}
+
+function u16be(n) { return [(n >> 8) & 0xFF, n & 0xFF]; }
+function u24be(n) { return [(n >> 16) & 0xFF, (n >> 8) & 0xFF, n & 0xFF]; }
+function u32be(n) { return [(n >> 24) & 0xFF, (n >> 16) & 0xFF, (n >> 8) & 0xFF, n & 0xFF]; }
+
+function chunk(name, dataBytes) {
+  const header = [];
+  for (let i = 0; i < 4; i++) header.push(name.charCodeAt(i));
+  return [...header, ...u32be(dataBytes.length), ...dataBytes];
+}
+
+// notes: [{ pitch: midi, startTicks: int, durationTicks: int, velocity: 1-127, channel: 0-15 }]
+// Returns an array of event bytes for one MTrk (excluding header & end-of-track meta).
+function buildTrackEvents(notes, opts = {}) {
+  const events = [];
+  // Track name (meta)
+  if (opts.name) {
+    const nameBytes = [...new TextEncoder().encode(opts.name)];
+    events.push({ tick: 0, order: 0, bytes: [0xFF, 0x03, ...vlq(nameBytes.length), ...nameBytes] });
+  }
+  // Program change (instrument)
+  if (opts.program != null) {
+    const ch = opts.channel ?? 0;
+    events.push({ tick: 0, order: 1, bytes: [0xC0 | ch, opts.program & 0x7F] });
+  }
+  // Notes -> on/off events
+  for (const n of notes) {
+    const ch = n.channel ?? opts.channel ?? 0;
+    const vel = Math.max(1, Math.min(127, n.velocity ?? 96));
+    events.push({ tick: n.startTicks, order: 2, bytes: [0x90 | ch, n.pitch & 0x7F, vel] });
+    events.push({ tick: n.startTicks + n.durationTicks, order: 3, bytes: [0x80 | ch, n.pitch & 0x7F, 64] });
+  }
+  events.sort((a, b) => a.tick - b.tick || a.order - b.order);
+
+  // Convert to delta-time stream
+  let lastTick = 0;
+  const bytes = [];
+  for (const e of events) {
+    const delta = Math.max(0, e.tick - lastTick);
+    bytes.push(...vlq(delta));
+    bytes.push(...e.bytes);
+    lastTick = e.tick;
+  }
+  // End of track
+  bytes.push(...vlq(0), 0xFF, 0x2F, 0x00);
+  return bytes;
+}
+
+// Conductor track: tempo + time signature at tick 0.
+function buildConductorTrack(bpm, timeSig = [4, 4]) {
+  const microsPerQuarter = Math.round(60_000_000 / bpm);
+  const [num, denom] = timeSig;
+  const denomPow = Math.round(Math.log2(denom));
+  const bytes = [];
+  // Time signature: FF 58 04 nn dd cc bb (cc=clocks/click, bb=32nd per quarter)
+  bytes.push(...vlq(0), 0xFF, 0x58, 0x04, num, denomPow, 0x18, 0x08);
+  // Tempo: FF 51 03 tt tt tt
+  bytes.push(...vlq(0), 0xFF, 0x51, 0x03, ...u24be(microsPerQuarter));
+  // End of track
+  bytes.push(...vlq(0), 0xFF, 0x2F, 0x00);
+  return bytes;
+}
+
+// tracks: [{ name, channel, program, notes: [...] }]
+function writeMidi({ bpm = 120, timeSig = [4, 4], tracks = [] }) {
+  const headerData = [...u16be(1), ...u16be(tracks.length + 1), ...u16be(PPQ)];
+  const headerChunk = chunk('MThd', headerData);
+
+  const conductor = chunk('MTrk', buildConductorTrack(bpm, timeSig));
+  const trackChunks = [];
+  for (const t of tracks) {
+    const body = buildTrackEvents(t.notes, { name: t.name, channel: t.channel, program: t.program });
+    trackChunks.push(...chunk('MTrk', body));
+  }
+
+  const all = [...headerChunk, ...conductor, ...trackChunks];
+  return new Uint8Array(all);
+}
+
+function downloadMidi(bytes, filename) {
+  const blob = new Blob([bytes], { type: 'audio/midi' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+}
+
+
+// ===== corpus.js =====
+
+// Corpus of riff fragments and rhythm patterns, hand-crafted in scale-degree notation.
+// Scale steps are integers where 0 = tonic, 7 = octave up, -7 = octave down.
+// Rhythm patterns are 16-step arrays (one bar of 16th-notes), 1 = onset, 0 = rest, T = tie/sustain.
+
+// Each riff fragment carries a "style" tag used as a prior when generating.
+const RIFF_FRAGMENTS = [
+  // ---- Genesis / dark, root-fifth pulse, modal ----
+  { style: 'genesis', steps: [0, 0, 4, 0, 6, 0, 4, 0] },
+  { style: 'genesis', steps: [0, -3, 0, 4, 0, -3, -5, 0] },
+  { style: 'genesis', steps: [0, 0, 6, 4, 0, 0, 4, 6] },
+  { style: 'genesis', steps: [0, 4, 6, 7, 6, 4, 0, -3] },
+  { style: 'genesis', steps: [0, 0, 0, 6, 0, 0, 4, 6] },
+
+  // ---- D.A.N.C.E. / syncopated funky melody ----
+  { style: 'dance', steps: [4, 2, 0, 4, 2, 4, 5, 7] },
+  { style: 'dance', steps: [0, 2, 4, 5, 7, 5, 4, 2] },
+  { style: 'dance', steps: [4, 5, 7, 5, 4, 2, 0, 2] },
+  { style: 'dance', steps: [7, 5, 4, 5, 2, 4, 0, 2] },
+  { style: 'dance', steps: [2, 4, 0, 2, 4, 5, 7, 4] },
+
+  // ---- Phantom / fast chromatic-feel descent & climb ----
+  { style: 'phantom', steps: [7, 6, 5, 4, 3, 2, 1, 0] },
+  { style: 'phantom', steps: [0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1] },
+  { style: 'phantom', steps: [4, 3, 4, 2, 4, 1, 4, 0] },
+  { style: 'phantom', steps: [7, 8, 9, 7, 8, 7, 6, 7] },
+  { style: 'phantom', steps: [0, 2, 1, 3, 2, 4, 3, 5] },
+
+  // ---- Anthemic / singable, scale-tone leaps to fifths ----
+  { style: 'anthem', steps: [0, 2, 4, 7, 4, 2, 0, -3] },
+  { style: 'anthem', steps: [2, 4, 5, 7, 5, 4, 2, 0] },
+  { style: 'anthem', steps: [4, 7, 4, 2, 0, 2, 4, 5] },
+  { style: 'anthem', steps: [0, 4, 7, 9, 7, 4, 2, 0] },
+  { style: 'anthem', steps: [7, 4, 2, 0, 2, 4, 7, 9] },
+
+  // ---- Minimal pulse / hypnotic ----
+  { style: 'pulse', steps: [0, 0, 0, 0, 4, 0, 0, 4] },
+  { style: 'pulse', steps: [0, 0, 4, 0, 0, 0, 4, 0] },
+  { style: 'pulse', steps: [0, 0, 0, 7, 0, 0, 0, 4] },
+  { style: 'pulse', steps: [0, 7, 0, 4, 0, 7, 0, 4] },
+
+  // ---- Cosmic disco / Nordic-disco / Todd Terje vibe ----
+  { style: 'cosmic', steps: [9, 7, 5, 4, 2, 0, -3, -5] },     // long descending line
+  { style: 'cosmic', steps: [0, 2, 4, 7, 9, 7, 4, 2] },        // up-and-down arch
+  { style: 'cosmic', steps: [0, 7, 0, 7, 4, 2, 0, -3] },       // octave bouncing
+  { style: 'cosmic', steps: [4, 7, 9, 11, 9, 7, 4, 2] },       // upper-register sweep
+  { style: 'cosmic', steps: [0, -3, 0, 4, 0, -3, 0, 7] },      // pedal-with-motion
+  { style: 'cosmic', steps: [2, 4, 7, 9, 11, 9, 7, 4] },       // climbing
+
+  // ---- Italo arp / synthwave 16ths ----
+  { style: 'italo', steps: [0, 4, 7, 4, 0, 4, 7, 4] },         // triad arp
+  { style: 'italo', steps: [0, 4, 7, 9, 7, 4, 0, -3] },        // arch over chord
+  { style: 'italo', steps: [0, 2, 4, 7, 4, 2, 0, -3] },
+  { style: 'italo', steps: [0, 4, 7, 9, 12, 9, 7, 4] },        // wider arp
+
+  // ---- Acid bass / TB-303 vibe ----
+  { style: 'acid', steps: [0, 0, 0, 0, 0, 7, 0, 0] },          // root with one accent
+  { style: 'acid', steps: [0, 1, 0, 1, 0, 7, 0, 7] },          // chromatic flourish
+  { style: 'acid', steps: [0, 0, 4, 0, 0, 7, 0, -2] },         // upward push
+  { style: 'acid', steps: [0, -3, 0, -3, 0, 7, 0, -3] },       // squelch
+
+  // ---- Filter house / Daft Punk loop ----
+  { style: 'filter', steps: [0, 2, 4, 2, 0, 2, 4, 2] },        // 4-bar hook shape
+  { style: 'filter', steps: [0, 4, 0, 4, 5, 4, 2, 0] },
+  { style: 'filter', steps: [4, 2, 0, 2, 4, 5, 4, 2] },
+
+  // ---- Topline / sing-along hook ----
+  { style: 'topline', steps: [4, 4, 2, 0, 4, 4, 2, 0] },       // chant-like
+  { style: 'topline', steps: [0, 4, 7, 4, 5, 4, 2, 0] },
+  { style: 'topline', steps: [4, 5, 7, 5, 4, 2, 0, 2] },
+
+  // ---- Ambient / slow gentle motion ----
+  { style: 'ambient', steps: [0, 2, 4, 5, 4, 2, 0, -3] },
+  { style: 'ambient', steps: [0, -3, -5, -3, 0, 4, 0, -3] },
+  { style: 'ambient', steps: [4, 5, 7, 5, 4, 2, 0, 2] },
+
+  // ---- Baroque / Bach-fugue subjects / Justice "Heavy Metal" ----
+  // Karakteristiska: stegvis moll/frygisk, leap up + descend, sequential motion
+  { style: 'baroque', steps: [0, -2, -3, -5, -3, -2, 0, 2] },   // moll-deklamation
+  { style: 'baroque', steps: [0, 2, 3, 4, 3, 2, 0, -2] },        // upp + ner steg
+  { style: 'baroque', steps: [0, -3, -5, -3, -1, -3, -5, -7] },  // descending
+  { style: 'baroque', steps: [0, 4, 3, 2, 0, -2, -3, -5] },      // leap-then-fall
+  { style: 'baroque', steps: [4, 5, 4, 2, 0, 2, 4, 3] },         // upper-voice
+  { style: 'baroque', steps: [0, 2, 4, 3, 2, 4, 3, 2] },         // sekvens
+  { style: 'baroque', steps: [-3, -2, 0, -2, -3, -5, -3, -7] },  // ledtoner
+
+  // ---- Rock / pentatonic power-riff (root-heavy, b7 hooks) ----
+  { style: 'rock', steps: [0, 0, 3, 0, 4, 0, 3, 2] },
+  { style: 'rock', steps: [0, 3, 4, 6, 4, 3, 0, 0] },
+  { style: 'rock', steps: [0, 0, 0, 2, 3, 3, 2, 0] },
+  { style: 'rock', steps: [4, 3, 0, 0, 4, 3, 0, 2] },
+  { style: 'rock', steps: [0, 2, 3, 3, 2, 0, -1, 0] },
+  { style: 'rock', steps: [0, 0, 6, 0, 0, 4, 3, 0] },
+
+  // ---- Reggae / dub bass (root-fifth-octave, laid back) ----
+  { style: 'reggae', steps: [0, 0, 4, 0, 5, 4, 0, 0] },
+  { style: 'reggae', steps: [0, 4, 7, 4, 0, 0, 4, 5] },
+  { style: 'reggae', steps: [0, -3, 0, 4, 0, 4, 5, 7] },
+  { style: 'reggae', steps: [0, 0, 0, 4, 5, 4, 2, 0] },
+  { style: 'reggae', steps: [7, 5, 4, 0, 4, 5, 4, 0] },
+
+  // ---- Latin / montuno-style arpeggiated motion ----
+  { style: 'latin', steps: [0, 2, 4, 2, 0, 2, 4, 7] },
+  { style: 'latin', steps: [4, 2, 0, 2, 4, 5, 4, 2] },
+  { style: 'latin', steps: [0, 4, 2, 4, 0, 4, 2, 4] },
+  { style: 'latin', steps: [7, 4, 2, 4, 7, 5, 4, 2] },
+  { style: 'latin', steps: [0, 2, 4, 5, 7, 5, 4, 2] },
+];
+
+// Rhythm cells per beat (4 sixteenth-positions). 1 = onset, 0 = rest.
+// We compose a bar from 4 cells. Style weights select which cells are more likely.
+const RHYTHM_CELLS = [
+  { id: 'A', pattern: [1, 0, 0, 0] },        // quarter on beat
+  { id: 'B', pattern: [1, 0, 1, 0] },        // 8th + 8th
+  { id: 'C', pattern: [0, 0, 1, 0] },        // off-beat 8th only
+  { id: 'D', pattern: [1, 1, 1, 0] },        // three 16ths in a row
+  { id: 'E', pattern: [1, 0, 1, 1] },        // 1, +, a
+  { id: 'F', pattern: [1, 1, 0, 1] },        // 1, e, a
+  { id: 'G', pattern: [1, 1, 1, 1] },        // four 16ths
+  { id: 'H', pattern: [0, 1, 0, 1] },        // pure off-beats
+  { id: 'I', pattern: [0, 0, 0, 0] },        // rest
+  { id: 'J', pattern: [1, 0, 0, 1] },        // 1 + a syncopation
+  { id: 'K', pattern: [0, 1, 1, 0] },        // e + duo
+];
+
+// Style weights for cell selection (per-beat). Higher = more likely.
+const STYLE_RHYTHM_WEIGHTS = {
+  genesis: { A: 6, B: 5, C: 2, D: 2, E: 3, F: 2, G: 1, H: 1, I: 2, J: 4, K: 2 },
+  dance:   { A: 2, B: 4, C: 4, D: 3, E: 5, F: 5, G: 2, H: 5, I: 2, J: 5, K: 4 },
+  phantom: { A: 1, B: 3, C: 2, D: 5, E: 5, F: 4, G: 7, H: 2, I: 1, J: 2, K: 3 },
+  anthem:  { A: 5, B: 6, C: 3, D: 2, E: 3, F: 2, G: 1, H: 2, I: 2, J: 3, K: 2 },
+  pulse:   { A: 8, B: 4, C: 2, D: 1, E: 1, F: 1, G: 1, H: 3, I: 5, J: 2, K: 1 },
+  // Cosmic disco — quarters + 8th-pickups, flowing, balanced
+  cosmic:  { A: 4, B: 5, C: 3, D: 3, E: 3, F: 3, G: 2, H: 3, I: 3, J: 4, K: 3 },
+  // Italo / synthwave — 16th-arp dominant
+  italo:   { A: 2, B: 4, C: 3, D: 5, E: 5, F: 4, G: 6, H: 3, I: 1, J: 3, K: 3 },
+  // Acid bass — busy 16ths with off-beat accents
+  acid:    { A: 2, B: 3, C: 4, D: 4, E: 5, F: 5, G: 6, H: 4, I: 1, J: 4, K: 4 },
+  // Filter house — syncopated 4-bar grooves
+  filter:  { A: 3, B: 4, C: 4, D: 3, E: 4, F: 4, G: 3, H: 4, I: 2, J: 5, K: 4 },
+  // Topline — on-beat sing-along
+  topline: { A: 5, B: 6, C: 2, D: 2, E: 2, F: 2, G: 1, H: 2, I: 3, J: 2, K: 2 },
+  // Ambient — mostly rests with sparse onsets
+  ambient: { A: 6, B: 2, C: 2, D: 1, E: 1, F: 1, G: 1, H: 1, I: 7, J: 1, K: 1 },
+  // Baroque — stadig 8-dels och 16-delsdriv, måttlig synkop
+  baroque: { A: 4, B: 5, C: 2, D: 4, E: 4, F: 3, G: 3, H: 2, I: 1, J: 3, K: 3 },
+  // Rock — driv på 8-delar, raka betoningar
+  rock:    { A: 5, B: 7, C: 2, D: 3, E: 3, F: 2, G: 2, H: 1, I: 1, J: 3, K: 1 },
+  // Reggae — off-beat-lett (one drop), gott om luft
+  reggae:  { A: 2, B: 2, C: 7, D: 1, E: 2, F: 1, G: 1, H: 6, I: 4, J: 3, K: 2 },
+  // Latin — synkoperat, clave-känsla
+  latin:   { A: 2, B: 3, C: 3, D: 3, E: 5, F: 4, G: 2, H: 3, I: 1, J: 6, K: 4 },
+};
+
+// Phrase structures: which role to use for each bar. Each structure carries a
+// `rep` tag (0..1) — when the user's repetition slider matches `rep`, that
+// structure is most likely to be chosen. Lower rep = more variation.
+//
+// Roles:
+//   'A'  = motif A as-is
+//   "A'" = motif A varied (random op: transpose / rotate / retrograde / sequence)
+//   "A''"= motif A varied (different op than A')
+//   'B'  = motif B (independent melodic idea)
+//   "B'" = motif B varied
+//   'F'  = fragment of current motif (first half + tail)
+//   'C'  = cadence: resolve final note(s) to chord root / tonic
+const PHRASE_STRUCTURES = {
+  2: [
+    { rep: 0.9, pat: ['A', 'A'] },
+    { rep: 0.6, pat: ['A', "A'"] },
+    { rep: 0.3, pat: ['A', 'B'] },
+    { rep: 0.5, pat: ['A', 'C'] },
+  ],
+  4: [
+    { rep: 0.95, pat: ['A', 'A', 'A', 'C'] },
+    { rep: 0.85, pat: ['A', 'A', "A'", 'C'] },
+    { rep: 0.75, pat: ['A', "A'", 'A', 'C'] },
+    { rep: 0.65, pat: ['A', "A'", "A''", 'C'] },
+    { rep: 0.55, pat: ['A', "A'", 'B', 'C'] },
+    { rep: 0.45, pat: ['A', 'B', "A'", 'C'] },
+    { rep: 0.35, pat: ['A', 'B', "B'", 'C'] },
+    { rep: 0.30, pat: ['A', 'F', 'B', 'C'] },
+    { rep: 0.20, pat: ['A', "A'", 'B', "B'"] },
+  ],
+  8: [
+    { rep: 0.90, pat: ['A', 'A', "A'", 'C', 'A', 'A', "A'", 'C'] },
+    { rep: 0.78, pat: ['A', "A'", 'A', 'C', 'A', "A'", "A''", 'C'] },
+    { rep: 0.65, pat: ['A', "A'", 'B', 'C', 'A', "A''", "B'", 'C'] },
+    { rep: 0.50, pat: ['A', "A'", 'B', "B'", 'A', "A'", "A''", 'C'] },
+    { rep: 0.40, pat: ['A', 'B', "A'", 'B', 'A', "A'", "B'", 'C'] },
+    { rep: 0.30, pat: ['A', "A'", 'B', "B'", "A''", 'F', 'B', 'C'] },
+    { rep: 0.20, pat: ['A', 'F', 'B', "A'", "B'", 'A', "A''", 'C'] },
+    { rep: 0.15, pat: ['A', 'B', "A'", "B'", 'A', 'B', "A''", 'C'] },
+  ],
+  16: [
+    { rep: 0.85, pat: ['A','A',"A'",'C','A','A',"A'",'C','A','A',"A''",'C','A','A',"A'",'C'] },
+    { rep: 0.60, pat: ['A',"A'",'B','C','A',"A''",'B','C','A',"A'",'B',"B'",'A',"A''",'B','C'] },
+    { rep: 0.40, pat: ['A','B',"A'",'C','A',"A''",'B','C','A',"A'","B'",'C','A','B',"A''",'C'] },
+    { rep: 0.25, pat: ['A',"A'",'B','C','B',"B'",'A','C','A',"A''",'F','B',"A''","B'",'A','C'] },
+  ],
+};
+
+function mod7(n) { return ((n % 7) + 7) % 7; }
+
+// Precomputed bigram transition tables — built once at module load.
+// Shape: { [style]: { [fromDeg]: { keys: Int8Array, weights: Float32Array } } }
+// Storing keys/weights as parallel typed arrays lets the hot Markov loop in
+// generateBarMelody skip Object.keys() + .map() allocations on every onset.
+const BIGRAMS_BY_STYLE = (() => {
+  // First pass: build nested counts object.
+  const counts = {};
+  for (const frag of RIFF_FRAGMENTS) {
+    const table = counts[frag.style] ?? (counts[frag.style] = {});
+    const steps = frag.steps;
+    for (let i = 0; i < steps.length - 1; i++) {
+      const a = mod7(steps[i]);
+      const b = mod7(steps[i + 1]);
+      const row = table[a] ?? (table[a] = {});
+      row[b] = (row[b] || 0) + 1;
+    }
+  }
+  // Second pass: flatten each {from: {to: count}} row to {keys, weights}.
+  const out = {};
+  for (const [style, table] of Object.entries(counts)) {
+    out[style] = {};
+    for (const [from, row] of Object.entries(table)) {
+      const keys = Object.keys(row).map(Number);
+      const weights = keys.map(k => row[k]);
+      out[style][from] = { keys, weights };
+    }
+  }
+  return out;
+})();
+
+// Fallback if style has no fragments — a neutral diatonic walk.
+const DEFAULT_BIGRAMS = {
+  0: { keys: [2, 4, 0], weights: [2, 2, 1] },
+  2: { keys: [0, 4], weights: [2, 1] },
+  4: { keys: [2, 0], weights: [2, 1] },
+};
+
+function bigramsForStyle(style) {
+  return BIGRAMS_BY_STYLE[style] ?? DEFAULT_BIGRAMS;
+}
+
+// ===================== DRUMS =====================
+// General MIDI drum map (channel 10 / index 9). Patterns are 16-step arrays of
+// onset PROBABILITY (1 = always, 0.x = sometimes — gives organic variation per
+// bar). `vel` is base velocity; `accent` marks steps that get a velocity boost.
+
+const GM = {
+  KICK: 36, SNARE: 38, CLAP: 39, RIM: 37,
+  CHAT: 42, OHAT: 46, RIDE: 51, CRASH: 49,
+  TOM_LO: 45, TOM_MID: 47, TOM_HI: 50,
+  TAMB: 54, COWBELL: 56, SHAKER: 70, CLAVE: 75,
+  CONGA_OPEN: 63, CONGA_SLAP: 62,
+};
+
+const DRUM_LABELS = {
+  36: 'Kick', 38: 'Virvel', 39: 'Clap', 37: 'Rimshot',
+  42: 'Hi-hat', 46: 'Open hat', 51: 'Ride', 49: 'Crash',
+  45: 'Tom låg', 47: 'Tom mid', 50: 'Tom hög',
+  54: 'Tamburin', 56: 'Cowbell', 70: 'Shaker', 75: 'Clave',
+  63: 'Conga öppen', 62: 'Conga slap',
+};
+
+// Each style: { [gmPitch]: { prob: number[16], vel: number, ghost?: boolean } }
+// ghost = extra hits added by density slider get very low velocity (ghost notes).
+const DRUM_STYLES = {
+  house: {
+    [GM.KICK]:   { prob: [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0], vel: 110 },
+    [GM.CLAP]:   { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], vel: 96 },
+    [GM.CHAT]:   { prob: [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0], vel: 72 },
+    [GM.OHAT]:   { prob: [0,0,.25,0, 0,0,.25,0, 0,0,.25,0, 0,0,.5,0], vel: 80 },
+    [GM.SHAKER]: { prob: [.2,.2,.2,.2, .2,.2,.2,.2, .2,.2,.2,.2, .2,.2,.2,.2], vel: 55, ghost: true },
+  },
+  techno: {
+    [GM.KICK]:   { prob: [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0], vel: 115 },
+    [GM.CLAP]:   { prob: [0,0,0,0, .7,0,0,0, 0,0,0,0, .7,0,0,0], vel: 88 },
+    [GM.CHAT]:   { prob: [.8,.5,.8,.5, .8,.5,.8,.5, .8,.5,.8,.5, .8,.5,.8,.5], vel: 60 },
+    [GM.OHAT]:   { prob: [0,0,.5,0, 0,0,.5,0, 0,0,.5,0, 0,0,.5,0], vel: 75 },
+    [GM.RIM]:    { prob: [0,.15,0,.15, 0,.15,0,0, 0,.15,0,.15, 0,0,.15,0], vel: 58, ghost: true },
+  },
+  disco: {
+    [GM.KICK]:   { prob: [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0], vel: 108 },
+    [GM.SNARE]:  { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], vel: 95 },
+    [GM.OHAT]:   { prob: [0,0,.95,0, 0,0,.95,0, 0,0,.95,0, 0,0,.95,0], vel: 85 },
+    [GM.CHAT]:   { prob: [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0], vel: 65 },
+    [GM.TAMB]:   { prob: [.3,.3,.3,.3, .3,.3,.3,.3, .3,.3,.3,.3, .3,.3,.3,.3], vel: 58, ghost: true },
+  },
+  rock: {
+    [GM.KICK]:   { prob: [1,0,0,0, 0,0,0,0, 1,0,.5,0, 0,0,0,0], vel: 112 },
+    [GM.SNARE]:  { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], vel: 105 },
+    [GM.CHAT]:   { prob: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], vel: 70 },
+    [GM.CRASH]:  { prob: [.3,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0], vel: 100 },
+    [GM.OHAT]:   { prob: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,.3,0], vel: 82 },
+  },
+  funkbreak: {
+    [GM.KICK]:   { prob: [1,0,0,.3, 0,0,.5,0, 0,.3,1,0, 0,.4,0,0], vel: 108 },
+    [GM.SNARE]:  { prob: [0,0,0,.35, 1,0,0,.35, 0,.35,0,0, 1,0,0,.35], vel: 102 },
+    [GM.CHAT]:   { prob: [.85,.5,.85,.5, .85,.5,.85,.5, .85,.5,.85,.5, .85,.5,.85,.5], vel: 64 },
+    [GM.OHAT]:   { prob: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,.35,0], vel: 80 },
+  },
+  latin: {
+    [GM.CLAVE]:      { prob: [1,0,0,1, 0,0,1,0, 0,0,1,0, 1,0,0,0], vel: 85 },   // 3-2 son
+    [GM.COWBELL]:    { prob: [.7,0,0,0, .7,0,0,0, .7,0,0,0, .7,0,0,0], vel: 75 },
+    [GM.CONGA_OPEN]: { prob: [0,0,.6,0, 0,0,.7,0, 0,0,.5,0, 0,0,.85,0], vel: 88 },
+    [GM.CONGA_SLAP]: { prob: [0,0,0,0, .6,0,0,0, 0,0,0,0, .6,0,0,0], vel: 80 },
+    [GM.SHAKER]:     { prob: [.8,.4,.8,.4, .8,.4,.8,.4, .8,.4,.8,.4, .8,.4,.8,.4], vel: 56, ghost: true },
+    [GM.KICK]:       { prob: [0,0,0,0, 0,0,.5,0, 0,0,0,0, 0,0,.8,0], vel: 100 },
+  },
+};
+
+// Fill material for the last bar of each 4-bar phrase: snare/tom runs over the
+// final beat(s). Each entry = [stepInBar, gmPitch, velocity].
+const DRUM_FILLS = [
+  [[12, GM.SNARE, 90], [13, GM.SNARE, 80], [14, GM.TOM_MID, 95], [15, GM.TOM_LO, 100]],
+  [[12, GM.TOM_HI, 92], [13, GM.TOM_MID, 92], [14, GM.TOM_LO, 96], [15, GM.SNARE, 100]],
+  [[13, GM.SNARE, 75], [14, GM.SNARE, 88], [15, GM.SNARE, 102]],
+  [[10, GM.SNARE, 70], [11, GM.SNARE, 78], [12, GM.TOM_HI, 88], [13, GM.TOM_MID, 92], [14, GM.TOM_LO, 96], [15, GM.CRASH, 100]],
+];
+
+
+// ===== generator.js =====
+
+// Riff generator: hybrid scale-template + Markov-bigram approach.
+// Produces an array of note events with scale-aware pitches and chord-tone biasing.
+
+const STEPS_PER_BEAT = 4;   // 16th-note grid
+const BEATS_PER_BAR = 4;
+const STEPS_PER_BAR = STEPS_PER_BEAT * BEATS_PER_BAR;
+const TICKS_PER_STEP = PPQ / STEPS_PER_BEAT; // PPQ from midi.js
+
+// --- Seeded RNG so a given seed reproduces a riff exactly ---
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function pickWeighted(items, weights, rng) {
+  const total = weights.reduce((s, w) => s + w, 0);
+  let r = rng() * total;
+  for (let i = 0; i < items.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return items[i];
+  }
+  return items[items.length - 1];
+}
+
+// ----- Rhythm generation -----
+// Build one bar of 16 onsets. density 0..1 is a real target: ~1 note/bar at 0, ~14 at 1.
+// Style picks the cell-shape vocabulary; density biases which cell-sizes get picked.
+// Bass-role forces an onset on step 0 so chord changes articulate on the downbeat.
+function generateBarRhythm(style, density, syncopation, rng, role = 'lead') {
+  const weights = STYLE_RHYTHM_WEIGHTS[style] || STYLE_RHYTHM_WEIGHTS.dance;
+  const onsets = new Array(STEPS_PER_BAR).fill(0);
+  const targetPerBeat = density * 4;
+
+  // Cell-selection weights depend only on (style, density, syncopation) — constant
+  // across the 4 beats of one bar, so we compute them once and reuse per beat.
+  const cellWeights = new Array(RHYTHM_CELLS.length);
+  for (let i = 0; i < RHYTHM_CELLS.length; i++) {
+    const c = RHYTHM_CELLS[i];
+    const styleW = weights[c.id] || 1;
+    const onsetCount = c.pattern[0] + c.pattern[1] + c.pattern[2] + c.pattern[3];
+    const densityFit = Math.exp(-Math.abs(onsetCount - targetPerBeat) * 1.4);
+    let w = styleW * densityFit;
+    if (c.pattern[0] === 0 && (c.pattern[1] || c.pattern[2] || c.pattern[3])) {
+      w *= 1 + syncopation * 2;
+    }
+    cellWeights[i] = w < 0.001 ? 0.001 : w;
+  }
+
+  for (let beat = 0; beat < BEATS_PER_BAR; beat++) {
+    const cell = pickWeighted(RHYTHM_CELLS, cellWeights, rng);
+    const base = beat * 4;
+    onsets[base]     = cell.pattern[0];
+    onsets[base + 1] = cell.pattern[1];
+    onsets[base + 2] = cell.pattern[2];
+    onsets[base + 3] = cell.pattern[3];
+  }
+
+  if (role === 'bass') onsets[0] = 1;
+  if (!onsets.some(x => x)) onsets[rng() < 0.7 ? 0 : 8] = 1;
+  return onsets;
+}
+
+// ----- Melodic generation using bigrams + chord-tone bias -----
+// `role`: 'lead' (default) or 'bass'. Bass forces root on beat 1, biases stepwise
+// motion, prefers root/fifth on strong beats, and triggers occasional octave drops.
+function generateBarMelody({ rhythm, style, scaleIntervals, tonicPc, chord, chromatic, range, rng, previousDeg = null, role = 'lead' }) {
+  const bigrams = bigramsForStyle(style);
+  const out = [];
+  let currentMod = previousDeg != null ? mod7(previousDeg) : null;
+  let currentOctaveOffset = 0;
+
+  const chordDegs = chordTonesInScale(chord, scaleIntervals, tonicPc);
+  const rootDeg = chordDegs[0];
+
+  for (let s = 0; s < STEPS_PER_BAR; s++) {
+    if (!rhythm[s]) continue;
+    const isStrong = (s % 8 === 0); // beats 1 & 3
+    const isDownbeat = (s === 0);
+
+    let nextMod;
+    if (currentMod == null) {
+      // First note of phrase: root for bass, chord tone for lead.
+      nextMod = role === 'bass' ? rootDeg : (chordDegs[Math.floor(rng() * chordDegs.length)]);
+    } else if (role === 'bass' && isDownbeat) {
+      // Bass: hard-anchor beat 1 to chord root regardless of bigram preference.
+      nextMod = rootDeg;
+    } else {
+      // Markov bigram with strong-beat chord-tone bias. The bigram table is
+      // precomputed to parallel arrays (keys/weights) so we don't have to call
+      // Object.keys / .map on every onset.
+      const dist = bigrams[currentMod] ?? bigrams[0] ?? { keys: [0, 2, 4], weights: [1, 1, 1] };
+      const keys = dist.keys;
+      const vals = dist.weights;
+      const n = keys.length;
+      // Build biased weights into a fresh small array (still allocated per onset,
+      // but no parseInt, no spread, no chained map). For typical n ≤ 5 this is
+      // fine; switching to a reusable Float64Array buffer is possible but uglier.
+      const biased = new Array(n);
+      const bassFifth = chordDegs[2];
+      for (let i = 0; i < n; i++) {
+        const deg = keys[i];
+        let w = vals[i];
+        if (isStrong && chordDegs.includes(deg)) w *= 3;
+        if (isDownbeat && chordDegs.includes(deg)) w *= 2.5;
+        if (role === 'bass') {
+          let stepDist = deg - currentMod;
+          if (stepDist > 3) stepDist -= 7;
+          else if (stepDist < -3) stepDist += 7;
+          const abs = stepDist < 0 ? -stepDist : stepDist;
+          if (abs === 0) w *= 1.6;
+          else if (abs === 1) w *= 3.0;
+          else if (abs === 2) w *= 1.4;
+          else w *= 0.35;
+          if (deg === rootDeg) w *= 1.8;
+          else if (deg === bassFifth) w *= 1.3;
+        }
+        biased[i] = w;
+      }
+      nextMod = pickWeighted(keys, biased, rng);
+    }
+
+    // Determine octave drift based on contour & range slider.
+    const stepDelta = currentMod == null ? 0 : signedDelta(currentMod, nextMod);
+    if (Math.abs(stepDelta) >= 4 && rng() < range * 0.4) {
+      currentOctaveOffset += stepDelta > 0 ? 1 : -1;
+    }
+    // Bass: octave-drop on beat 3 — classic Justice / French Touch move.
+    if (role === 'bass' && s === 8 && nextMod === rootDeg && rng() < 0.45) {
+      currentOctaveOffset -= 1;
+    }
+    // Keep within sensible bounds (tighter for bass).
+    const octMax = role === 'bass' ? 1 : 2;
+    const octMin = role === 'bass' ? -1 : -1;
+    currentOctaveOffset = Math.max(octMin, Math.min(octMax, currentOctaveOffset));
+
+    let scaleStep = nextMod + 7 * currentOctaveOffset;
+
+    let chromaticOffset = 0;
+    if (chromatic > 0 && currentMod != null && rng() < chromatic) {
+      chromaticOffset = stepDelta > 0 ? -1 : 1;
+    }
+
+    out.push({ step: s, scaleStep, chromaticOffset });
+    currentMod = nextMod;
+  }
+  return out;
+}
+
+// Get scale-degree indices (0..6) for the chord-tones present in the chord, in current key.
+function chordTonesInScale(chord, scaleIntervals, tonicPc) {
+  if (!chord) {
+    // default to tonic triad
+    return [0, 2, 4];
+  }
+  const scalePCs = scaleIntervals.map(i => (tonicPc + i + 12) % 12);
+  const degs = [];
+  for (const pc of chord.pitchClasses) {
+    const idx = scalePCs.indexOf(pc);
+    if (idx >= 0) degs.push(idx);
+  }
+  // fallback to tonic triad if nothing matched
+  return degs.length ? degs : [0, 2, 4];
+}
+
+// Signed shortest distance from a to b on 7-step circle.
+function signedDelta(a, b) {
+  let d = b - a;
+  if (d > 3) d -= 7;
+  if (d < -3) d += 7;
+  return d;
+}
+
+// ----- Variation operators on a motif -----
+// Each returns a new motif (array of {step, scaleStep, chromaticOffset}).
+
+function transposeMotif(motif, scaleStepDelta) {
+  return motif.map(n => ({ ...n, scaleStep: n.scaleStep + scaleStepDelta }));
+}
+
+function rotateMotifRhythm(motif, shiftSteps) {
+  return motif
+    .map(n => ({ ...n, step: (n.step + shiftSteps + STEPS_PER_BAR) % STEPS_PER_BAR }))
+    .sort((a, b) => a.step - b.step);
+}
+
+function retrogradeMotif(motif) {
+  // Reverse the order of pitches while keeping rhythm positions.
+  if (motif.length === 0) return motif;
+  const sorted = [...motif].sort((a, b) => a.step - b.step);
+  const reversedPitches = sorted.map(n => n.scaleStep).reverse();
+  return sorted.map((n, i) => ({ ...n, scaleStep: reversedPitches[i] }));
+}
+
+function sequenceMotif(motif, stepDelta) {
+  // Take first half, then repeat it transposed for second half.
+  if (motif.length === 0) return motif;
+  let half = motif.filter(n => n.step < STEPS_PER_BAR / 2);
+  // If all original onsets were in the back half, shift them forward so the
+  // first half isn't silent (which would make the variation produce no notes).
+  if (half.length === 0) {
+    half = motif.map(n => ({ ...n, step: n.step - STEPS_PER_BAR / 2 }))
+                .filter(n => n.step >= 0);
+  }
+  const second = half.map(n => ({
+    step: n.step + STEPS_PER_BAR / 2,
+    scaleStep: n.scaleStep + stepDelta,
+    chromaticOffset: n.chromaticOffset,
+  }));
+  return [...half, ...second];
+}
+
+function fragmentMotif(motif) {
+  // Use only the first half of the motif (tail = silence).
+  let half = motif.filter(n => n.step < STEPS_PER_BAR / 2);
+  // Fallback: if first half is empty, fold second-half notes down.
+  if (half.length === 0) {
+    half = motif.map(n => ({ ...n, step: n.step - STEPS_PER_BAR / 2 }))
+                .filter(n => n.step >= 0 && n.step < STEPS_PER_BAR / 2);
+  }
+  return half;
+}
+
+// Pick a random variation operator and apply it. `avoidOp` excludes the previous
+// op so successive variations don't collapse to identical shapes. For bass-role
+// the operator pool is narrower — big transpositions sound un-basslike.
+function varyMotif(motif, rng, avoidOp = null, role = 'lead') {
+  // Bass: skip rotate-ops (they break the beat-1 onset that anchors the harmony)
+  // and big transpositions / retrograde (un-basslike).
+  const ops = role === 'bass'
+    ? ['transpose+2', 'transpose-2', 'sequence+2', 'sequence-2', 'fragment']
+    : ['transpose+2', 'transpose-2', 'transpose+4', 'rotate2', 'rotate-2', 'retrograde', 'sequence+2', 'sequence-2', 'fragment'];
+  const choices = ops.filter(o => o !== avoidOp);
+  const op = choices[Math.floor(rng() * choices.length)];
+  let out;
+  switch (op) {
+    case 'transpose+2':  out = transposeMotif(motif, 2); break;
+    case 'transpose-2':  out = transposeMotif(motif, -2); break;
+    case 'transpose+4':  out = transposeMotif(motif, 4); break;
+    case 'rotate2':      out = rotateMotifRhythm(motif, 2); break;
+    case 'rotate-2':     out = rotateMotifRhythm(motif, -2); break;
+    case 'retrograde':   out = retrogradeMotif(motif); break;
+    case 'sequence+2':   out = sequenceMotif(motif, 2); break;
+    case 'sequence-2':   out = sequenceMotif(motif, -2); break;
+    case 'fragment':     out = fragmentMotif(motif); break;
+    default:             out = motif.map(n => ({ ...n }));
+  }
+  return { motif: out, op };
+}
+
+function cadenceMotif(motif, chord, scaleIntervals, tonicPc, rng) {
+  // Replace final note with a chord-tone resolution (root preferred)
+  if (motif.length === 0) return motif;
+  const out = motif.map(n => ({ ...n }));
+  const last = out[out.length - 1];
+  const chordDegs = chordTonesInScale(chord, scaleIntervals, tonicPc);
+  // Lean on root (chord's lowest-listed degree)
+  const preferred = chordDegs[0];
+  last.scaleStep = preferred + 7 * Math.floor(last.scaleStep / 7);
+  last.chromaticOffset = 0;
+  return out;
+}
+
+// ----- Top-level: build the whole phrase -----
+function generateRiff({
+  tonicMidi,
+  scaleIntervals,
+  bars = 4,
+  bpm = 124,
+  style = 'genesis',
+  role = 'lead',
+  voicing = 'compact',          // chord spacing — only used when role === 'chord'
+  extensions = 'none',          // chord type (m7/maj7/9/sus etc.) — only for chord-role
+  chordProgression = [],
+  sliders = {},
+  seed = null,
+  baseRegister = 48,
+}) {
+  const rng = mulberry32(seed ?? Math.floor(Math.random() * 0xFFFFFFFF));
+  const density = clamp(sliders.density ?? 0.55, 0, 1);
+  const syncopation = clamp(sliders.syncopation ?? 0.4, 0, 1);
+  const range = clamp(sliders.range ?? 0.5, 0, 1);
+  const chromatic = clamp(sliders.chromatic ?? 0.1, 0, 1);
+  // User-facing "variation" 0..1 is inverse of internal repetition.
+  const variation = clamp(sliders.variation ?? 0.35, 0, 1);
+  const repetition = 1 - variation;
+  const lengthFactor = clamp(sliders.length ?? 0.5, 0, 1);
+  const registerSlider = clamp(sliders.register ?? 0.4, 0, 1);
+
+  const tonicPc = ((tonicMidi % 12) + 12) % 12;
+  const ticksPerBar = STEPS_PER_BAR * TICKS_PER_STEP;
+
+  // Map register slider to a base MIDI center:
+  // 0 = MIDI 36 (deep bass), 1 = MIDI 72 (lead).
+  const register = Math.round(36 + registerSlider * 36);
+  const adjustedBase = register;
+
+  // Pick a phrase structure for this bar count. Match repetition slider to
+  // each structure's `rep` tag — closer match = higher weight.
+  const structurePool = PHRASE_STRUCTURES[bars] || PHRASE_STRUCTURES[4];
+  const structureWeights = structurePool.map(s =>
+    Math.exp(-Math.pow((repetition - s.rep) * 2.5, 2))
+  );
+  const chosen = pickWeighted(structurePool, structureWeights, rng);
+  const structure = [...chosen.pat];
+  if (bars > 1) structure[bars - 1] = 'C';
+
+  // Build chord-per-bar map: if progression provided, distribute. Otherwise no chord.
+  const chordPerBar = [];
+  for (let b = 0; b < bars; b++) {
+    if (chordProgression.length === 0) {
+      chordPerBar.push(null);
+    } else if (chordProgression.length >= bars) {
+      chordPerBar.push(chordProgression[b]);
+    } else {
+      // stretch: e.g., 4 chords over 8 bars -> each chord 2 bars
+      const idx = Math.floor((b / bars) * chordProgression.length);
+      chordPerBar.push(chordProgression[idx]);
+    }
+  }
+
+  // Generate motif A (the primary melodic idea).
+  const rhythmA = generateBarRhythm(style, density, syncopation, rng, role);
+  const motifA = generateBarMelody({
+    rhythm: rhythmA, style, scaleIntervals, tonicPc,
+    chord: chordPerBar[0], chromatic, range, rng, role,
+  });
+
+  // Generate motif B (independent idea — different rhythm, different starting pitch).
+  const rhythmB = generateBarRhythm(style, density, syncopation, rng, role);
+  const motifB = generateBarMelody({
+    rhythm: rhythmB, style, scaleIntervals, tonicPc,
+    chord: chordPerBar[Math.min(2, bars - 1)] ?? chordPerBar[0],
+    chromatic, range, rng, role,
+    previousDeg: role === 'bass' ? 4 : 3, // contrast B with A's starting region
+  });
+
+  const notes = [];
+  let lastVarOp = null;          // remember last variation so successive A' / A'' differ
+  let currentMotif = motifA;     // for 'C' and 'F': what to base cadence/fragment on
+
+  for (let b = 0; b < bars; b++) {
+    const barRole = structure[b];          // 'A', "A'", 'B', etc.
+    const chord = chordPerBar[b];
+
+    let bar;
+    if (barRole === 'A') {
+      bar = motifA.map(n => ({ ...n }));
+      currentMotif = motifA;
+    } else if (barRole === "A'") {
+      const { motif: m, op } = varyMotif(motifA, rng, lastVarOp, role);
+      bar = m;
+      lastVarOp = op;
+      currentMotif = bar;
+    } else if (barRole === "A''") {
+      const { motif: m, op } = varyMotif(motifA, rng, lastVarOp, role);
+      bar = m;
+      lastVarOp = op;
+      currentMotif = bar;
+    } else if (barRole === 'B') {
+      bar = motifB.map(n => ({ ...n }));
+      currentMotif = motifB;
+    } else if (barRole === "B'") {
+      const { motif: m, op } = varyMotif(motifB, rng, lastVarOp, role);
+      bar = m;
+      lastVarOp = op;
+      currentMotif = bar;
+    } else if (barRole === 'F') {
+      bar = fragmentMotif(currentMotif);
+    } else if (barRole === 'C') {
+      bar = cadenceMotif(currentMotif, chord, scaleIntervals, tonicPc, rng);
+    } else {
+      bar = motifA.map(n => ({ ...n }));
+    }
+
+    // Safety net: if a variation produced an empty bar, fall back to motifA
+    // so the user never sees a silent bar / empty piano roll.
+    if (bar.length === 0) {
+      bar = motifA.length ? motifA.map(n => ({ ...n })) : [{ step: 0, scaleStep: 0, chromaticOffset: 0 }];
+    }
+
+    // Strong-beat anchoring: beat 1 = chord ROOT (always — anchors the harmony),
+    // beat 3 = nearest chord tone. For bass-role this is non-negotiable; for
+    // lead it pulls the melody onto chord changes so progressions sound clear.
+    if (chord) {
+      const chordDegs = chordTonesInScale(chord, scaleIntervals, tonicPc);
+      const rootDeg = chordDegs[0];
+      for (const n of bar) {
+        if (n.step === 0) {
+          // Always force beat 1 to chord root.
+          const octBase = Math.floor(n.scaleStep / 7) * 7;
+          n.scaleStep = octBase + rootDeg;
+          n.chromaticOffset = 0;
+        } else if (n.step === 8) {
+          // Beat 3: nearest chord tone (third/fifth are great here).
+          const currentMod = mod7(n.scaleStep);
+          if (!chordDegs.includes(currentMod)) {
+            let best = currentMod, bestDist = 7;
+            for (const cd of chordDegs) {
+              const d = Math.abs(signedDelta(currentMod, cd));
+              if (d < bestDist) { bestDist = d; best = cd; }
+            }
+            const octBase = n.scaleStep - currentMod;
+            n.scaleStep = octBase + best;
+          }
+        }
+      }
+    } else if (role === 'bass') {
+      // No chord progression set: anchor every bar's beat-1 to the tonic so the
+      // bass pulses on the key root instead of drifting.
+      const firstNote = bar.find(n => n.step === 0);
+      if (firstNote) {
+        const octBase = Math.floor(firstNote.scaleStep / 7) * 7;
+        firstNote.scaleStep = octBase;
+        firstNote.chromaticOffset = 0;
+      }
+    }
+
+    // Convert scale steps to MIDI and emit notes
+    for (let i = 0; i < bar.length; i++) {
+      const n = bar[i];
+      const nextStep = i + 1 < bar.length ? bar[i + 1].step : STEPS_PER_BAR;
+      const stepsToNext = nextStep - n.step;
+
+      // Determine duration: max sustain via lengthFactor (0 = stab, 1 = full sustain to next onset)
+      const durationSteps = Math.max(1, Math.round(stepsToNext * (0.35 + lengthFactor * 0.7)));
+
+      const pitch = scaleStepToMidi(n.scaleStep, tonicPc, scaleIntervals, adjustedBase) + (n.chromaticOffset || 0);
+      const velocity = velocityForStep(n.step, style, rng);
+
+      // Cap durations at one bar so a stuck synth voice can never ring longer
+      // than ~2 seconds at typical BPM — a hard safety net for playback.
+      const maxDuration = STEPS_PER_BAR * TICKS_PER_STEP;
+      const rawDuration = Math.max(TICKS_PER_STEP * 0.5, durationSteps * TICKS_PER_STEP - 5);
+      notes.push({
+        pitch: clamp(pitch, 0, 127),
+        startTicks: (b * STEPS_PER_BAR + n.step) * TICKS_PER_STEP,
+        durationTicks: Math.min(maxDuration, rawDuration),
+        velocity,
+        scaleStep: n.scaleStep,
+        chromaticOffset: n.chromaticOffset || 0,
+      });
+    }
+  }
+
+  // Chord-role: expand each melodic note into a voiced chord stab. The Markov
+  // top-note becomes the highest voice in the voicing; underneath we stack
+  // chord-tones from the current bar's harmony.
+  let finalNotes = notes;
+  if (role === 'chord') {
+    finalNotes = expandToChordStabs(notes, chordPerBar, voicing, extensions, scaleIntervals, tonicPc, adjustedBase, ticksPerBar);
+  }
+
+  return {
+    notes: finalNotes,
+    totalBars: bars,
+    ticksPerBar,
+    basePitch: adjustedBase,
+    tonicPc,
+    scaleIntervals,
+  };
+}
+
+// ----- Chord voicing & extensions -----
+// Apply chord extensions (7ths, 9ths, sus, 13ths) on top of the basic triad.
+// `profile` is a key from EXTENSION_PROFILES; `isMinor` decides between m7/maj7
+// when adding a 7th. Returns a sorted, deduplicated semitone-interval array.
+function applyExtensions(intervals, profile, isMinor) {
+  if (!profile || profile === 'none') return intervals;
+  const set = new Set(intervals);
+
+  switch (profile) {
+    case 'seven':                                   // m7 or maj7 (diatonic)
+      set.add(isMinor ? 10 : 11);
+      break;
+    case 'dom7':                                    // always b7 (bluesy)
+      set.add(10);
+      break;
+    case 'ninth':                                   // m9 / maj9
+      set.add(isMinor ? 10 : 11);
+      set.add(14);
+      break;
+    case 'add9':                                    // triad + 9, no 7th
+      set.add(14);
+      break;
+    case 'six':                                     // triad + 6, no 7th
+      set.add(9);
+      break;
+    case 'sus2':                                    // replace 3rd with 2nd
+      set.delete(3); set.delete(4); set.add(2);
+      break;
+    case 'sus4':                                    // replace 3rd with 4th
+      set.delete(3); set.delete(4); set.add(5);
+      break;
+    case 'thirteenth':                              // full m13 / maj13
+      set.add(isMinor ? 10 : 11);
+      set.add(14);
+      set.add(21);
+      break;
+  }
+  return [...set].sort((a, b) => a - b);
+}
+
+// Given a parsed chord (or null = tonic triad from scale), build the set of
+// pitches for the requested voicing style + extension, anchored around basePitch.
+function chordVoicingPitches(chord, voicing, extensions, scaleIntervals, tonicPc, basePitch) {
+  let intervals, rootPc;
+  if (chord) {
+    intervals = chord.intervals.slice();
+    rootPc = chord.root % 12;
+  } else {
+    const third = scaleIntervals[2] ?? 3;
+    const fifth = scaleIntervals[4] ?? 7;
+    intervals = [0, third, fifth];
+    rootPc = tonicPc;
+  }
+
+  // Detect minor-ness from the 3rd in the chord (handles user-typed quality
+  // AND the scale-built fallback). Used by applyExtensions to pick m7 vs maj7.
+  const isMinor = intervals.includes(3) && !intervals.includes(4);
+  intervals = applyExtensions(intervals, extensions, isMinor);
+
+  // Voicing transformations (spacing / register).
+  switch (voicing) {
+    case 'spread':
+      intervals = [...intervals, 12];               // +oct of root on top
+      break;
+    case 'shell':
+      intervals = [0, intervals[intervals.length - 1] ?? 7];
+      break;
+    case 'wide':
+      intervals = [0, ...intervals.slice(1).map(i => i + 12)];
+      break;
+    case 'octave':
+      intervals = [0, 12];
+      break;
+    case 'compact':
+    default:
+      break;
+  }
+
+  const baseOctave = Math.round((basePitch - rootPc) / 12);
+  const rootMidi = rootPc + 12 * baseOctave;
+  return intervals.map(iv => rootMidi + iv);
+}
+
+function expandToChordStabs(notes, chordPerBar, voicing, extensions, scaleIntervals, tonicPc, basePitch, ticksPerBar) {
+  // The voicing is constant within a bar (chord doesn't change mid-bar in our
+  // model), so precompute the clamped + deduplicated pitch list once per bar.
+  // For a 16-bar chord-riff with ~150 onsets this avoids 140+ redundant builds,
+  // plus the per-onset Set allocation that was used for duplicate guarding.
+  const voicingByBar = chordPerBar.map(c => {
+    const raw = chordVoicingPitches(c ?? null, voicing, extensions, scaleIntervals, tonicPc, basePitch);
+    const seen = new Set();
+    const out = [];
+    for (const p of raw) {
+      const pitch = p < 0 ? 0 : p > 127 ? 127 : p;
+      if (!seen.has(pitch)) { seen.add(pitch); out.push(pitch); }
+    }
+    return out;
+  });
+
+  const out = [];
+  for (const n of notes) {
+    const barIdx = Math.floor(n.startTicks / ticksPerBar);
+    const voicingPitches = voicingByBar[barIdx] ?? voicingByBar[0];
+    const topPitch = n.pitch;
+    const harmVel = Math.max(40, n.velocity - 10);
+    out.push(n);
+    for (let i = 0; i < voicingPitches.length; i++) {
+      const pitch = voicingPitches[i];
+      if (pitch === topPitch) continue;
+      out.push({
+        pitch,
+        startTicks: n.startTicks,
+        durationTicks: n.durationTicks,
+        velocity: harmVel,
+        scaleStep: n.scaleStep,
+        chromaticOffset: 0,
+      });
+    }
+  }
+  return out;
+}
+
+// ----- Drum generation -----
+// Probability-pattern based: each instrument rolls its 16-step pattern per bar.
+// density scales optional hits (prob < 0.95), syncopation adds extra off-grid
+// hits, variation controls per-bar mutation + fill frequency. Returns notes
+// with channel 9 (GM drums).
+function generateDrums({ drumStyle, bars = 4, sliders = {}, seed = null }) {
+  const rng = mulberry32(seed ?? Math.floor(Math.random() * 0xFFFFFFFF));
+  const style = DRUM_STYLES[drumStyle] || DRUM_STYLES.house;
+  const density = clamp(sliders.density ?? 0.5, 0, 1);
+  const syncopation = clamp(sliders.syncopation ?? 0.3, 0, 1);
+  const variation = clamp(sliders.variation ?? 0.3, 0, 1);
+
+  const ticksPerBar = STEPS_PER_BAR * TICKS_PER_STEP;
+  const notes = [];
+
+  for (let b = 0; b < bars; b++) {
+    // Is this a fill bar? Last bar of each 4-bar group (and the final bar).
+    const isFillBar = (b % 4 === 3) || (b === bars - 1 && bars > 1);
+    const doFill = isFillBar && rng() < 0.25 + variation * 0.65;
+    // Fill occupies the tail steps — suppress other instruments there.
+    const fill = doFill ? DRUM_FILLS[Math.floor(rng() * DRUM_FILLS.length)] : null;
+    const fillStart = fill ? fill[0][0] : 16;
+
+    for (const [pitchStr, inst] of Object.entries(style)) {
+      const pitch = +pitchStr;
+      for (let s = 0; s < STEPS_PER_BAR; s++) {
+        if (s >= fillStart && pitch !== GM.KICK) continue; // fill owns the tail
+        let p = inst.prob[s];
+        if (p <= 0) {
+          // Syncopation: chance of an extra ghost hit on off-16ths.
+          if (syncopation > 0 && (s % 2 === 1) && rng() < syncopation * 0.06) {
+            p = 1;
+          } else continue;
+        } else if (p < 0.95) {
+          // Optional hit — density scales how often it fires.
+          p = p * (0.35 + density * 1.3);
+        }
+        if (rng() >= p) continue;
+
+        const accent = s % 4 === 0 ? 8 : 0;
+        const ghost = inst.ghost && rng() < 0.5;
+        const vel = Math.max(30, Math.min(125, Math.round(
+          (ghost ? inst.vel * 0.55 : inst.vel) + accent + (rng() - 0.5) * 12
+        )));
+        notes.push({
+          pitch,
+          startTicks: b * ticksPerBar + s * TICKS_PER_STEP,
+          durationTicks: pitch === GM.OHAT ? TICKS_PER_STEP * 2 : Math.round(TICKS_PER_STEP * 0.9),
+          velocity: vel,
+          channel: 9,
+        });
+      }
+    }
+
+    if (fill) {
+      for (const [s, pitch, vel] of fill) {
+        notes.push({
+          pitch,
+          startTicks: b * ticksPerBar + s * TICKS_PER_STEP,
+          durationTicks: Math.round(TICKS_PER_STEP * 0.9),
+          velocity: Math.min(125, vel + Math.round((rng() - 0.5) * 10)),
+          channel: 9,
+        });
+      }
+      // Crash on the downbeat after a fill (if not the last bar).
+      if (b + 1 < bars && rng() < 0.6) {
+        notes.push({
+          pitch: GM.CRASH,
+          startTicks: (b + 1) * ticksPerBar,
+          durationTicks: TICKS_PER_STEP * 4,
+          velocity: 98,
+          channel: 9,
+        });
+      }
+    }
+  }
+
+  notes.sort((a, b2) => a.startTicks - b2.startTicks);
+  return { notes, totalBars: bars, ticksPerBar, isDrums: true };
+}
+
+function velocityForStep(step, style, rng) {
+  // beat 1 strong, beat 3 medium, off-beats softer; jitter small.
+  const beatPos = step % 4;
+  const beatNum = Math.floor(step / 4);
+  let base = 80;
+  if (step === 0) base = 108;
+  else if (beatPos === 0) base = 95;
+  else if (beatPos === 2) base = 86;
+  else base = 76;
+  if (style === 'phantom') base += 4;
+  if (style === 'pulse') base -= 4;
+  return Math.max(40, Math.min(120, Math.round(base + (rng() - 0.5) * 10)));
+}
+
+function scaleStepToMidi(scaleStep, tonicPc, scaleIntervals, basePitch) {
+  // scaleStep can be negative or > 6 (extra octaves)
+  const oct = Math.floor(scaleStep / 7);
+  const deg = mod7(scaleStep);
+  const interval = scaleIntervals[deg];
+  // Anchor: tonic in the octave closest to basePitch.
+  const baseOctave = Math.round((basePitch - tonicPc) / 12);
+  return tonicPc + 12 * baseOctave + interval + 12 * oct;
+}
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+// ----- Apply a harmonized voice -----
+// kind 'parallel' = literal semitone offset (`amount` in semitones, can be chromatic).
+// kind 'diatonic' = scale-step offset (`amount` in scale-degrees: +2 = ters upp, +4 = kvint upp etc.).
+function applyHarmony(notes, { kind, amount, tonicPc, scaleIntervals, basePitch }) {
+  return notes.map(n => {
+    let pitch;
+    if (kind === 'parallel') {
+      pitch = n.pitch + amount;
+    } else {
+      const newStep = (n.scaleStep ?? 0) + amount;
+      pitch = scaleStepToMidi(newStep, tonicPc, scaleIntervals, basePitch) + (n.chromaticOffset || 0);
+    }
+    return {
+      ...n,
+      pitch: clamp(pitch, 0, 127),
+      velocity: Math.max(40, n.velocity - 14),
+    };
+  });
+}
+
+
+// ===== app.js =====
+
+// UI controller: presets, sliders, voice management, playback, piano roll, MIDI export.
+
+const SLIDER_DEFS = [
+  { id: 'density',     label: 'Densitet',    hint: 'gles melodi → tätt riff' },
+  { id: 'variation',   label: 'Variation',   hint: 'upprepar motivet → varierar fritt' },
+  { id: 'syncopation', label: 'Synkopering', hint: 'off-beat-attack' },
+  { id: 'length',      label: 'Notlängd',    hint: 'staccato / legato' },
+  { id: 'register',    label: 'Register',    hint: 'bas → lead' },
+  { id: 'range',       label: 'Oktavspann',  hint: 'register-vidd' },
+  { id: 'chromatic',   label: 'Kromatik',    hint: 'icke-skala-toner' },
+];
+
+// Presets — internal `style` selects rhythm-cell vocabulary; `role` is 'lead' or
+// 'bass' (drives root-anchoring and stepwise-bias). `category` groups them in
+// the dropdown; `tip` is Swedish advice on sound design and BPM.
+const PRESETS = {
+  // ─── BAS ───
+  basgang: {
+    label: 'Basgång',  category: 'Bas',
+    style: 'genesis',  role: 'bass',
+    density: 0.40, variation: 0.15, syncopation: 0.30,
+    length: 0.55, register: 0.05, range: 0.30, chromatic: 0.05,
+    tip: 'Saw-bas med lowpass och kort sustain. Funkar 90–115 BPM. Lägg ackordföljden i samma takt — bassen följer grundtonerna.',
+  },
+  drivingBas: {
+    label: 'Driving bas (Justice)',  category: 'Bas',
+    style: 'genesis',  role: 'bass',
+    density: 0.55, variation: 0.20, syncopation: 0.40,
+    length: 0.45, register: 0.15, range: 0.35, chromatic: 0.10,
+    tip: 'Saw-bas + distortion + lowpass-filter, kort sustain. För Justice "Genesis"-stil: 116–124 BPM och lägg en oktav-stämma upp med samma ljud.',
+  },
+  acidBas: {
+    label: 'Acid bas (303)',  category: 'Bas',
+    style: 'acid',  role: 'bass',
+    density: 0.75, variation: 0.35, syncopation: 0.50,
+    length: 0.30, register: 0.15, range: 0.40, chromatic: 0.20,
+    tip: 'Klassisk TB-303: saw-osc + resonant lowpass + envelope modulation. Automera filter-cutoff och resonance. 125–135 BPM. Höj notlängd för slide.',
+  },
+  hiphopBas: {
+    label: 'Hip-hop bas (half-time)',  category: 'Bas',
+    style: 'pulse',  role: 'bass',
+    density: 0.20, variation: 0.20, syncopation: 0.20,
+    length: 0.85, register: 0.00, range: 0.30, chromatic: 0.00,
+    tip: '808-sub eller ren sinus i bottenregister. Långa sustains, sparsamma noter. 70–90 BPM för half-time. Kombinera med trap/drill-trummor.',
+  },
+
+  // ─── LEAD ───
+  anthem: {
+    label: 'Anthem-hook',  category: 'Lead',
+    style: 'anthem',  role: 'lead',
+    density: 0.40, variation: 0.30, syncopation: 0.20,
+    length: 0.70, register: 0.55, range: 0.55, chromatic: 0.00,
+    tip: 'Stor saw-lead i unison/stack. Lägg två stämmor (oktav upp + kvint upp diatoniskt). Reverb + ping-pong-delay. Festival/EDM-bredd.',
+  },
+  funkigLead: {
+    label: 'Funkig lead (D.A.N.C.E.)',  category: 'Lead',
+    style: 'dance',  role: 'lead',
+    density: 0.65, variation: 0.50, syncopation: 0.70,
+    length: 0.45, register: 0.55, range: 0.55, chromatic: 0.00,
+    tip: 'Pluck eller filtered-saw med kort decay. D.A.N.C.E.-stil. Lägg en låg-oktav-stämma för dans-groove. 116–124 BPM.',
+  },
+  cosmicDisco: {
+    label: 'Cosmic disco (Todd Terje)',  category: 'Lead',
+    style: 'cosmic',  role: 'lead',
+    density: 0.50, variation: 0.55, syncopation: 0.25,
+    length: 0.75, register: 0.50, range: 0.70, chromatic: 0.05,
+    tip: 'Saw-lead med långt portamento eller sub-saw + chorus. "Inspector Norse"-glide. Lägg oktav-stämma över. 115–125 BPM.',
+  },
+  filterHouse: {
+    label: 'Filter house (Daft Punk)',  category: 'Lead',
+    style: 'filter',  role: 'lead',
+    density: 0.55, variation: 0.20, syncopation: 0.55,
+    length: 0.50, register: 0.45, range: 0.40, chromatic: 0.00,
+    tip: 'Filtered saw loopad i 4 takter. Automera lowpass-cutoff på knob för Daft Punk "Da Funk"-vibe. 120–128 BPM. Lägg oktav-stämma upp.',
+  },
+
+  // ─── ARP ───
+  italoArp: {
+    label: 'Italo arp (Synthwave)',  category: 'Arp',
+    style: 'italo',  role: 'lead',
+    density: 0.80, variation: 0.30, syncopation: 0.40,
+    length: 0.30, register: 0.50, range: 0.65, chromatic: 0.05,
+    tip: 'Bright saw med kort decay + dotted 1/16 delay för synthwave/"Drive"-vibe. 110–120 BPM. Oktav-stämma över lyfter arp-en.',
+  },
+  kromatiskArp: {
+    label: 'Kromatisk arp (Phantom)',  category: 'Arp',
+    style: 'phantom',  role: 'lead',
+    density: 0.85, variation: 0.55, syncopation: 0.45,
+    length: 0.30, register: 0.55, range: 0.70, chromatic: 0.40,
+    tip: 'Heavy saw + medium distortion. Justice-stil. Lägg två stämmor (oktav upp + kvint upp diatoniskt). 124–132 BPM.',
+  },
+  pulserande: {
+    label: 'Pulserande arp',  category: 'Arp',
+    style: 'pulse',  role: 'lead',
+    density: 0.25, variation: 0.10, syncopation: 0.15,
+    length: 0.35, register: 0.25, range: 0.25, chromatic: 0.00,
+    tip: 'Pluck-synth, bell eller marimba. Hypnotisk single-noter. Bra som intro/outro eller hookigt motiv.',
+  },
+
+  // ─── MELODI ───
+  melody: {
+    label: 'Sångmelodi',  category: 'Melodi',
+    style: 'anthem',  role: 'lead',
+    density: 0.22, variation: 0.65, syncopation: 0.10,
+    length: 0.90, register: 0.65, range: 0.50, chromatic: 0.00,
+    tip: 'Pad, strings eller mjuk lead med lång attack. Lågt vibrato. Lägg en stämma en oktav under för fyllighet. Bra som verse-melodi.',
+  },
+  topline: {
+    label: 'Topline (vocal-hook)',  category: 'Melodi',
+    style: 'topline',  role: 'lead',
+    density: 0.30, variation: 0.40, syncopation: 0.15,
+    length: 0.80, register: 0.75, range: 0.40, chromatic: 0.00,
+    tip: 'Sjungbar lead i högre register. Använd som vocal-replacement över dropp eller refräng. Pluck, klocka eller bright lead.',
+  },
+  ambient: {
+    label: 'Ambient pad-melodi',  category: 'Melodi',
+    style: 'ambient',  role: 'lead',
+    density: 0.10, variation: 0.45, syncopation: 0.05,
+    length: 1.00, register: 0.50, range: 0.40, chromatic: 0.00,
+    tip: 'Mellotron, Rhodes eller breath-pad med långt attack och mycket reverb. Funkar som långsam evolverande melodi över en pad-bädd.',
+  },
+
+  // ─── ACKORD-RIFF (rytmiska stabs — clav, wurli, piano) ───
+  clavRiff: {
+    label: 'Clav-riff (funky)',  category: 'Ackord-riff',
+    style: 'dance',  role: 'chord',  voicing: 'compact',  extensions: 'ninth',
+    density: 0.60, variation: 0.30, syncopation: 0.65,
+    length: 0.25, register: 0.55, range: 0.30, chromatic: 0.00,
+    tip: 'Clavinet (Hohner D6) eller plucked clav-synth, kort decay, EQ-boost 1–2 kHz. Default: m9/9-ackord (Stevie "Superstition"-flavor). 100–115 BPM. Lägg en ackordföljd som i / VII / VI / VII.',
+  },
+  wurliStab: {
+    label: 'Wurlitzer stab',  category: 'Ackord-riff',
+    style: 'anthem',  role: 'chord',  voicing: 'spread',  extensions: 'seven',
+    density: 0.35, variation: 0.25, syncopation: 0.45,
+    length: 0.55, register: 0.55, range: 0.40, chromatic: 0.00,
+    tip: 'Wurlitzer 200A eller Rhodes med tremolo, lätt overdrive och plate-reverb. Default: m7/maj7-ackord — Steely Dan / soul. 90–110 BPM. Off-beat-stabs.',
+  },
+  pianoStab: {
+    label: 'Piano-stab (house)',  category: 'Ackord-riff',
+    style: 'filter',  role: 'chord',  voicing: 'wide',  extensions: 'seven',
+    density: 0.45, variation: 0.30, syncopation: 0.60,
+    length: 0.20, register: 0.60, range: 0.35, chromatic: 0.00,
+    tip: 'Akustisk piano eller FM-piano (DX7 E.PIANO 1). Default: m7-ackord (klassisk fransk house). Sidechain mot kick. 118–126 BPM. Daft Punk-feel.',
+  },
+  neoSoul: {
+    label: 'Neo-soul keys (D’Angelo)',  category: 'Ackord-riff',
+    style: 'anthem',  role: 'chord',  voicing: 'wide',  extensions: 'thirteenth',
+    density: 0.30, variation: 0.50, syncopation: 0.55,
+    length: 0.70, register: 0.55, range: 0.45, chromatic: 0.00,
+    tip: 'Rhodes Mark V eller akustisk piano med chorus och vintage-comp. Default: m13/maj13-ackord (full jazz-färgning). 75–95 BPM. D’Angelo / Robert Glasper / neo-soul.',
+  },
+  sus4Stab: {
+    label: 'Sus-stab (modern pop)',  category: 'Ackord-riff',
+    style: 'filter',  role: 'chord',  voicing: 'spread',  extensions: 'sus4',
+    density: 0.40, variation: 0.30, syncopation: 0.40,
+    length: 0.40, register: 0.55, range: 0.35, chromatic: 0.00,
+    tip: 'Bright pluck eller pad. Default: sus4-ackord — öppen, ambivalent. Funkar som "spänning före upplösning" innan en chorus. Modern pop / electropop. 100–125 BPM.',
+  },
+
+  // ─── POLYFONI (kanonisk imitation, fuga) ───
+  heavyMetal: {
+    label: 'Heavy metal (Justice / barock)',  category: 'Polyfoni',
+    style: 'baroque',  role: 'bass',
+    density: 0.55, variation: 0.20, syncopation: 0.20,
+    length: 0.55, register: 0.18, range: 0.45, chromatic: 0.10,
+    tip: 'Distad saw-bas i mid-low register, tonart moll/harmonisk-moll/frygisk. Lägg två stämmor: ① "Oktav upp" med "1 takt senare", ② "Kvint upp (diatonisk)" med "2 takter senare". Ger Justice "Heavy Metal"-effekt. 110–125 BPM, gärna 8 takter.',
+  },
+  fuga: {
+    label: 'Bach-fuga',  category: 'Polyfoni',
+    style: 'baroque',  role: 'lead',
+    density: 0.55, variation: 0.25, syncopation: 0.15,
+    length: 0.70, register: 0.40, range: 0.55, chromatic: 0.15,
+    tip: 'Spela på orgel, cembalo eller pluck. Tonart: moll, dorisk eller frygisk. Lägg "Kvint upp diatoniskt" med "1 takt senare" (dux/comes — fugans dominant-svar) och ev. "Oktav upp" med "2 takter senare" för en tredje röst. Använd minst 4 takter.',
+  },
+
+  // ─── NYA GENRER (bortom dans) ───
+  rockRiff: {
+    label: 'Rock-riff (pentatonisk)',  category: 'Lead',
+    style: 'rock',  role: 'lead',
+    density: 0.50, variation: 0.25, syncopation: 0.25,
+    length: 0.40, register: 0.30, range: 0.35, chromatic: 0.05,
+    tip: 'Distad gitarr eller tjock unison-synth. Mollpentatonisk skala rekommenderas starkt. 90–140 BPM. Lägg gärna en stämma "Oktav ned" för power-känsla.',
+  },
+  reggaeBass: {
+    label: 'Reggae-bas (dub)',  category: 'Bas',
+    style: 'reggae',  role: 'bass',
+    density: 0.35, variation: 0.20, syncopation: 0.50,
+    length: 0.60, register: 0.05, range: 0.30, chromatic: 0.00,
+    tip: 'Rund fingerbas eller subby synth-bas, dämpad diskant, gärna lite dub-delay på annat. 70–90 BPM. Luftig — pauserna är lika viktiga som tonerna.',
+  },
+  reggaeSkank: {
+    label: 'Reggae skank',  category: 'Ackord-riff',
+    style: 'reggae',  role: 'chord',  voicing: 'compact',  extensions: 'none',
+    density: 0.25, variation: 0.15, syncopation: 0.90,
+    length: 0.15, register: 0.60, range: 0.30, chromatic: 0.00,
+    tip: 'Gitarr-skank eller orgel-stab på off-beats (2 och 4 i 8-delar). Kort och torrt — staccato är hela poängen. 70–90 BPM. Funkar perfekt ihop med Reggae-bas.',
+  },
+  montuno: {
+    label: 'Latin montuno (piano)',  category: 'Melodi',
+    style: 'latin',  role: 'lead',
+    density: 0.65, variation: 0.30, syncopation: 0.60,
+    length: 0.35, register: 0.60, range: 0.50, chromatic: 0.00,
+    tip: 'Akustiskt piano, gärna dubblat i oktaver (lägg stämma "Oktav upp", samtidig). Synkoperat arpeggio-mönster à la salsa/son. 90–110 BPM. Para med Latin percussion-trummorna.',
+  },
+  tranceArp: {
+    label: 'Trance-arp',  category: 'Arp',
+    style: 'italo',  role: 'lead',
+    density: 0.90, variation: 0.15, syncopation: 0.10,
+    length: 0.15, register: 0.65, range: 0.55, chromatic: 0.00,
+    tip: 'Supersaw med delay (3/16 ping-pong) och sidechain mot kicken. 16-delar rakt igenom. 132–142 BPM. Lägg stämma "Oktav upp" med "¼ takt senare" för klassisk trance-kaskad.',
+  },
+  lofiKeys: {
+    label: 'Lo-fi keys',  category: 'Ackord-riff',
+    style: 'ambient',  role: 'chord',  voicing: 'compact',  extensions: 'ninth',
+    density: 0.18, variation: 0.40, syncopation: 0.20,
+    length: 0.85, register: 0.50, range: 0.35, chromatic: 0.00,
+    tip: 'Rhodes eller piano genom tape-emulering (wow/flutter), lågpass runt 6 kHz, vinyl-knaster. m9-ackord i långsamt tempo, 70–85 BPM. Lo-fi hip-hop / study beats.',
+  },
+
+  // ─── TRUMMOR (GM kanal 10) ───
+  drumsHouse: {
+    label: 'House 4x4',  category: 'Trummor',
+    role: 'drums',  drumStyle: 'house',
+    density: 0.50, variation: 0.30, syncopation: 0.20,
+    length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00,
+    tip: 'Klassisk house: kick på varje fjärdedel, clap på 2 & 4, off-beat hats. 120–128 BPM. Exportera och dra in på ett GM-trumspår eller mappa om till din sampler.',
+  },
+  drumsTechno: {
+    label: 'Techno (minimal)',  category: 'Trummor',
+    role: 'drums',  drumStyle: 'techno',
+    density: 0.55, variation: 0.20, syncopation: 0.30,
+    length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00,
+    tip: 'Maskinell 16-dels-hihat, hård kick, sparsamma rimshots. 125–135 BPM. Höj Densitet för tätare hi-hats, Variation för mer rörelse.',
+  },
+  drumsDisco: {
+    label: 'Disco',  category: 'Trummor',
+    role: 'drums',  drumStyle: 'disco',
+    density: 0.55, variation: 0.30, syncopation: 0.15,
+    length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00,
+    tip: 'Four-on-the-floor med öppen hi-hat på varje off-beat ("pea soup") och tamburin. 110–122 BPM. Para med Cosmic disco-basen!',
+  },
+  drumsRock: {
+    label: 'Rock-komp',  category: 'Trummor',
+    role: 'drums',  drumStyle: 'rock',
+    density: 0.45, variation: 0.40, syncopation: 0.15,
+    length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00,
+    tip: 'Rakt rock-komp: kick 1 & 3, virvel 2 & 4, 8-dels-hats, crash på fraser. 90–140 BPM. Höj Variation för fler tom-fills.',
+  },
+  drumsFunk: {
+    label: 'Funk breakbeat',  category: 'Trummor',
+    role: 'drums',  drumStyle: 'funkbreak',
+    density: 0.60, variation: 0.45, syncopation: 0.50,
+    length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00,
+    tip: 'Synkoperad kick, ghost notes på virveln, 16-dels-hats à la Funky Drummer. 95–110 BPM. Densitet styr ghost-tätheten.',
+  },
+  drumsLatin: {
+    label: 'Latin percussion',  category: 'Trummor',
+    role: 'drums',  drumStyle: 'latin',
+    density: 0.60, variation: 0.30, syncopation: 0.40,
+    length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00,
+    tip: '3-2 son-clave, congas, cowbell på fjärdedelar, shaker-16-delar. 90–115 BPM. Lägg ovanpå valfritt komp — eller para med Latin montuno.',
+  },
+};
+
+const VOICE_OPTIONS = [
+  { label: 'Oktav ned',                kind: 'parallel', amount: -12 },
+  { label: 'Kvint ned (parallell)',    kind: 'parallel', amount: -7 },
+  { label: 'Ters ned (diatonisk)',     kind: 'diatonic', amount: -2 },
+  { label: 'Ters upp (diatonisk)',     kind: 'diatonic', amount: 2 },
+  { label: 'Kvart upp (diatonisk)',    kind: 'diatonic', amount: 3 },
+  { label: 'Kvint upp (diatonisk)',    kind: 'diatonic', amount: 4 },
+  { label: 'Sext upp (diatonisk)',     kind: 'diatonic', amount: 5 },
+  { label: 'Oktav upp',                kind: 'parallel', amount: 12 },
+  { label: 'Oktav + kvint upp',        kind: 'parallel', amount: 19 },
+  { label: 'Två oktaver upp',          kind: 'parallel', amount: 24 },
+];
+
+// Kanonisk fördröjning per stämma. Mätt i 16-delssteg (16 steg = 1 takt).
+// Funkar för Bach-fuga och Justice "Heavy Metal"-effekt: röster spelar
+// samma motiv men fasförskjutet.
+const VOICE_DELAYS = [
+  { label: 'samtidig',         steps: 0 },
+  { label: '¼ takt senare',    steps: 4 },
+  { label: '½ takt senare',    steps: 8 },
+  { label: '1 takt senare',    steps: 16 },
+  { label: '2 takter senare',  steps: 32 },
+  { label: '4 takter senare',  steps: 64 },
+];
+
+const STATE = {
+  style: 'genesis',
+  role: 'lead',
+  voicing: 'compact',
+  extensions: 'none',
+  drumStyle: null,
+  presetKey: 'basgang',
+  sliders: {},
+  voices: [],
+  currentResult: null,
+  currentSeed: null,
+};
+
+const EXTENSION_OPTIONS = [
+  { value: 'none',       label: 'Triad (3-toners)' },
+  { value: 'seven',      label: '7:a (m7 / maj7)' },
+  { value: 'dom7',       label: 'Dominant 7 (b7)' },
+  { value: 'ninth',      label: '9:a (m9 / maj9)' },
+  { value: 'add9',       label: 'add9 (triad + 9)' },
+  { value: 'six',        label: 'Sext (6:a)' },
+  { value: 'sus2',       label: 'sus2' },
+  { value: 'sus4',       label: 'sus4' },
+  { value: 'thirteenth', label: '13:a (full jazz)' },
+];
+
+let synthMain, synthHarm, transportPart;
+let playStarting = false;  // guard against rapid double-clicks on Play
+
+// ---------- INIT ----------
+document.addEventListener('DOMContentLoaded', () => {
+  buildSliders();
+  bindPresets();
+  bindVoiceUI();
+  bindActions();
+  applyPreset('basgang');
+  generate();
+});
+
+function buildSliders() {
+  const root = document.getElementById('sliders');
+  root.innerHTML = '';
+  for (const def of SLIDER_DEFS) {
+    const wrap = document.createElement('div');
+    wrap.className = 'slider';
+    wrap.innerHTML = `
+      <label>
+        <span>${def.label} <span style="opacity:.55;text-transform:none;letter-spacing:0;font-size:11px">${def.hint}</span></span>
+        <span class="value" data-value="${def.id}">0</span>
+      </label>
+      <input type="range" min="0" max="100" step="1" id="slider-${def.id}" data-slider="${def.id}">
+    `;
+    root.appendChild(wrap);
+  }
+  for (const def of SLIDER_DEFS) {
+    const el = document.getElementById(`slider-${def.id}`);
+    el.addEventListener('input', e => {
+      STATE.sliders[def.id] = e.target.value / 100;
+      document.querySelector(`[data-value="${def.id}"]`).textContent = e.target.value;
+    });
+  }
+  refreshSliderUI();
+}
+
+function refreshSliderUI() {
+  for (const def of SLIDER_DEFS) {
+    const v = Math.round((STATE.sliders[def.id] ?? 0) * 100);
+    const el = document.getElementById(`slider-${def.id}`);
+    if (el) el.value = v;
+    const valEl = document.querySelector(`[data-value="${def.id}"]`);
+    if (valEl) valEl.textContent = v;
+  }
+}
+
+// Category order in the dropdown — must include every value used in PRESETS.
+const CATEGORY_ORDER = ['Bas', 'Lead', 'Arp', 'Ackord-riff', 'Melodi', 'Polyfoni', 'Trummor'];
+
+function bindPresets() {
+  const select = document.getElementById('preset-select');
+  select.innerHTML = '';
+  for (const cat of CATEGORY_ORDER) {
+    const group = document.createElement('optgroup');
+    group.label = cat;
+    for (const [key, preset] of Object.entries(PRESETS)) {
+      if (preset.category !== cat) continue;
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = preset.label;
+      group.appendChild(opt);
+    }
+    select.appendChild(group);
+  }
+  select.addEventListener('change', e => applyPreset(e.target.value));
+
+  // Populate the extensions dropdown (visible only when role === 'chord').
+  const extSel = document.getElementById('extensions-select');
+  if (extSel) {
+    extSel.innerHTML = EXTENSION_OPTIONS
+      .map(o => `<option value="${o.value}">${o.label}</option>`)
+      .join('');
+    extSel.addEventListener('change', e => { STATE.extensions = e.target.value; });
+  }
+}
+
+function applyPreset(name) {
+  const preset = PRESETS[name];
+  if (!preset) return;
+  STATE.style = preset.style ?? STATE.style;
+  STATE.role = preset.role ?? 'lead';
+  STATE.voicing = preset.voicing ?? 'compact';
+  STATE.extensions = preset.extensions ?? 'none';
+  STATE.drumStyle = preset.drumStyle ?? null;
+  STATE.presetKey = name;
+  for (const def of SLIDER_DEFS) STATE.sliders[def.id] = preset[def.id];
+  const select = document.getElementById('preset-select');
+  if (select) select.value = name;
+  const tipEl = document.getElementById('preset-tip');
+  if (tipEl) tipEl.textContent = preset.tip ?? '';
+  refreshExtensionsUI();
+  refreshPanelVisibility();
+  refreshSliderUI();
+}
+
+// Layout-säkring: hide controls that don't apply to the current role so the UI
+// never shows knobs that silently do nothing.
+//  - drums: no key/scale, no chord progression, no voices, no pitch-related sliders
+//  - others: everything visible
+const DRUM_HIDDEN_SLIDERS = ['length', 'register', 'range', 'chromatic'];
+
+function refreshPanelVisibility() {
+  const isDrums = STATE.role === 'drums';
+
+  const progPanel = document.getElementById('panel-progression');
+  if (progPanel) progPanel.style.display = isDrums ? 'none' : '';
+  const voicesPanel = document.getElementById('panel-voices');
+  if (voicesPanel) voicesPanel.style.display = isDrums ? 'none' : '';
+
+  // Key + scale selects live inside labels in the Tonart & form grid.
+  for (const id of ['root', 'scale']) {
+    const el = document.getElementById(id);
+    if (el) el.closest('label').style.display = isDrums ? 'none' : '';
+  }
+
+  // Pitch-related sliders are meaningless for drums.
+  for (const id of DRUM_HIDDEN_SLIDERS) {
+    const input = document.getElementById(`slider-${id}`);
+    if (input) input.closest('.slider').style.display = isDrums ? 'none' : '';
+  }
+}
+
+// Show / sync the extensions dropdown (only meaningful for chord-role presets).
+function refreshExtensionsUI() {
+  const wrapper = document.getElementById('extensions-wrap');
+  const select = document.getElementById('extensions-select');
+  if (!wrapper || !select) return;
+  const showIt = STATE.role === 'chord';
+  wrapper.style.display = showIt ? '' : 'none';
+  if (showIt) select.value = STATE.extensions;
+}
+
+// ---------- VOICES ----------
+function bindVoiceUI() {
+  document.getElementById('add-voice').addEventListener('click', () => {
+    STATE.voices.push({ optionIndex: 7, delayIndex: 0, velOffset: -10 }); // default: octave up, samtidig
+    renderVoices();
+  });
+}
+
+function renderVoices() {
+  const root = document.getElementById('voices');
+  root.innerHTML = '';
+  STATE.voices.forEach((voice, idx) => {
+    const row = document.createElement('div');
+    row.className = 'voice-row';
+    row.innerHTML = `
+      <span class="voice-num">${idx + 1}</span>
+      <label>Intervall
+        <select data-voice-interval="${idx}">
+          ${VOICE_OPTIONS.map((o, i) => `<option value="${i}" ${i === voice.optionIndex ? 'selected' : ''}>${o.label}</option>`).join('')}
+        </select>
+      </label>
+      <label>Fördröjning
+        <select data-voice-delay="${idx}">
+          ${VOICE_DELAYS.map((d, i) => `<option value="${i}" ${i === (voice.delayIndex ?? 0) ? 'selected' : ''}>${d.label}</option>`).join('')}
+        </select>
+      </label>
+      <label>Velocity
+        <select data-voice-vel="${idx}">
+          <option value="0" ${voice.velOffset === 0 ? 'selected' : ''}>0</option>
+          <option value="-10" ${(voice.velOffset ?? -10) === -10 ? 'selected' : ''}>-10</option>
+          <option value="-20" ${voice.velOffset === -20 ? 'selected' : ''}>-20</option>
+          <option value="-30" ${voice.velOffset === -30 ? 'selected' : ''}>-30</option>
+        </select>
+      </label>
+      <button class="remove-voice" data-remove="${idx}" title="Ta bort">×</button>
+    `;
+    root.appendChild(row);
+  });
+  root.querySelectorAll('[data-voice-interval]').forEach(s => {
+    s.addEventListener('change', e => {
+      STATE.voices[+e.target.dataset.voiceInterval].optionIndex = +e.target.value;
+    });
+  });
+  root.querySelectorAll('[data-voice-delay]').forEach(s => {
+    s.addEventListener('change', e => {
+      STATE.voices[+e.target.dataset.voiceDelay].delayIndex = +e.target.value;
+    });
+  });
+  root.querySelectorAll('[data-voice-vel]').forEach(s => {
+    s.addEventListener('change', e => {
+      STATE.voices[+e.target.dataset.voiceVel].velOffset = +e.target.value;
+    });
+  });
+  root.querySelectorAll('[data-remove]').forEach(b => {
+    b.addEventListener('click', e => {
+      STATE.voices.splice(+e.target.dataset.remove, 1);
+      renderVoices();
+    });
+  });
+}
+
+// ---------- ACTIONS ----------
+function bindActions() {
+  document.getElementById('random').addEventListener('click', randomize);
+  document.getElementById('generate').addEventListener('click', generate);
+  document.getElementById('play').addEventListener('click', play);
+  document.getElementById('stop').addEventListener('click', stop);
+  document.getElementById('download').addEventListener('click', download);
+  document.getElementById('clear-prog').addEventListener('click', () => {
+    document.getElementById('progression').value = '';
+  });
+}
+
+function randomize() {
+  // Random key
+  const roots = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  document.getElementById('root').value = roots[Math.floor(Math.random() * roots.length)];
+  const scales = ['minor', 'minor', 'minor', 'phrygian', 'dorian', 'harmonic-minor', 'minor-pent', 'blues'];
+  document.getElementById('scale').value = scales[Math.floor(Math.random() * scales.length)];
+
+  // Random preset, then nudge each slider
+  const presetKeys = Object.keys(PRESETS);
+  const presetName = presetKeys[Math.floor(Math.random() * presetKeys.length)];
+  applyPreset(presetName);
+  for (const def of SLIDER_DEFS) {
+    const nudge = (Math.random() - 0.5) * 0.3;
+    STATE.sliders[def.id] = Math.max(0, Math.min(1, STATE.sliders[def.id] + nudge));
+  }
+  refreshSliderUI();
+
+  // Random bars (4 or 8 mostly)
+  const bars = [4, 4, 4, 8, 8, 2][Math.floor(Math.random() * 6)];
+  document.getElementById('bars').value = bars;
+
+  generate();
+}
+
+function readUI() {
+  const rootName = document.getElementById('root').value;
+  const scaleName = document.getElementById('scale').value;
+  const bars = parseInt(document.getElementById('bars').value, 10);
+  const bpm = parseInt(document.getElementById('bpm').value, 10);
+  const progressionText = document.getElementById('progression').value.trim();
+
+  const tonicPc = pitchClassFromName(rootName);
+  // Anchor tonic around MIDI 48 (C3-ish) so register slider has room.
+  const tonicMidi = 48 + tonicPc;
+  const scaleIntervals = SCALES[scaleName] || SCALES.minor;
+  const chordProgression = parseProgression(progressionText, tonicMidi, scaleIntervals);
+
+  return { rootName, scaleName, bars, bpm, tonicMidi, scaleIntervals, chordProgression };
+}
+
+function generate() {
+  const ui = readUI();
+  const seed = Math.floor(Math.random() * 0xFFFFFFFF);
+  STATE.currentSeed = seed;
+
+  if (STATE.role === 'drums') {
+    const result = generateDrums({
+      drumStyle: STATE.drumStyle,
+      bars: ui.bars,
+      sliders: STATE.sliders,
+      seed,
+    });
+    STATE.currentResult = { main: result, voices: [], bars: ui.bars, bpm: ui.bpm, isDrums: true };
+    const label = PRESETS[STATE.presetKey]?.label ?? 'Trummor';
+    document.getElementById('seed-display').textContent =
+      `seed: ${seed.toString(16).padStart(8, '0')}   ·   ${ui.bars} takter @ ${ui.bpm} bpm   ·   ${label}`;
+    renderPianoRoll();
+    return;
+  }
+
+  const result = generateRiff({
+    tonicMidi: ui.tonicMidi,
+    scaleIntervals: ui.scaleIntervals,
+    bars: ui.bars,
+    bpm: ui.bpm,
+    style: STATE.style,
+    role: STATE.role,
+    voicing: STATE.voicing,
+    extensions: STATE.extensions,
+    chordProgression: ui.chordProgression,
+    sliders: STATE.sliders,
+    seed,
+  });
+
+  // Build harmonized voices with optional canonic delay. Done in a single pass:
+  // pre-filter source notes by whether they'd still fall inside the phrase, then
+  // harmonize + shift + clamp duration in one go (was 3 chained maps + filter).
+  const totalTicks = ui.bars * result.ticksPerBar;
+  const TICKS_PER_STEP = result.ticksPerBar / 16;
+  const voiceTracks = STATE.voices.map(v => {
+    const opt = VOICE_OPTIONS[v.optionIndex];
+    const delayTicks = VOICE_DELAYS[v.delayIndex ?? 0].steps * TICKS_PER_STEP;
+    const velOffset = v.velOffset ?? -10;
+
+    // Drop source notes whose shifted start would already be past the phrase end.
+    // Skips wasted applyHarmony work when delay swallows the whole phrase.
+    const sourceNotes = delayTicks === 0
+      ? result.notes
+      : result.notes.filter(n => n.startTicks + delayTicks < totalTicks);
+    if (sourceNotes.length === 0) return [];
+
+    const harmonized = applyHarmony(sourceNotes, {
+      kind: opt.kind,
+      amount: opt.amount,
+      tonicPc: result.tonicPc,
+      scaleIntervals: result.scaleIntervals,
+      basePitch: result.basePitch,
+    });
+
+    const out = new Array(harmonized.length);
+    for (let i = 0; i < harmonized.length; i++) {
+      const n = harmonized[i];
+      const startTicks = n.startTicks + delayTicks;
+      const remaining = totalTicks - startTicks;
+      out[i] = {
+        pitch: n.pitch,
+        startTicks,
+        durationTicks: Math.max(60, Math.min(n.durationTicks, remaining)),
+        velocity: Math.max(35, Math.min(120, n.velocity + velOffset)),
+        scaleStep: n.scaleStep,
+        chromaticOffset: n.chromaticOffset,
+      };
+    }
+    return out;
+  });
+
+  STATE.currentResult = {
+    main: result,
+    voices: voiceTracks,
+    bars: ui.bars,
+    bpm: ui.bpm,
+  };
+
+  const styleLabel = PRESETS[STATE.presetKey]?.label ?? STATE.style;
+  document.getElementById('seed-display').textContent =
+    `seed: ${seed.toString(16).padStart(8, '0')}   ·   ${ui.rootName} ${ui.scaleName}   ·   ${ui.bars} takter @ ${ui.bpm} bpm   ·   ${styleLabel}`;
+
+  renderPianoRoll();
+}
+
+// ---------- PIANO ROLL ----------
+// Renders a flat SVG once per generate. For ~500 nodes, building an HTML string
+// and assigning via innerHTML is several times faster than per-element createElementNS.
+function renderPianoRoll() {
+  const container = document.getElementById('piano-roll');
+  if (!STATE.currentResult) { container.innerHTML = ''; return; }
+  if (STATE.currentResult.isDrums) { renderDrumRoll(container); return; }
+  const { main, voices, bars } = STATE.currentResult;
+
+  // Find pitch range without spreading large arrays.
+  let minPitch = Infinity, maxPitch = -Infinity;
+  for (const n of main.notes) {
+    if (n.pitch < minPitch) minPitch = n.pitch;
+    if (n.pitch > maxPitch) maxPitch = n.pitch;
+  }
+  for (const tr of voices) for (const n of tr) {
+    if (n.pitch < minPitch) minPitch = n.pitch;
+    if (n.pitch > maxPitch) maxPitch = n.pitch;
+  }
+  if (minPitch === Infinity) { container.innerHTML = ''; return; }
+  minPitch -= 1; maxPitch += 1;
+  const pitchRange = maxPitch - minPitch + 1;
+
+  const ticksTotal = bars * main.ticksPerBar;
+  const width = 900;
+  const rowH = Math.max(6, Math.min(14, Math.floor(220 / pitchRange)));
+  const height = Math.max(160, rowH * pitchRange);
+  const totalSteps = bars * STEPS_PER_BAR;
+
+  // Build SVG markup as a single string — far less DOM thrash than appendChild loops.
+  const parts = [`<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">`];
+
+  // Vertical gridlines (per step).
+  for (let i = 0; i <= totalSteps; i++) {
+    const x = (i / totalSteps) * width;
+    const cls = i % STEPS_PER_BAR === 0 ? 'gridline-bar'
+              : i % STEPS_PER_BEAT === 0 ? 'gridline-beat'
+              : 'gridline';
+    parts.push(`<line class="${cls}" x1="${x}" y1="0" x2="${x}" y2="${height}"/>`);
+  }
+  // Horizontal C-octave lines.
+  for (let p = minPitch; p <= maxPitch; p++) {
+    if (p % 12 === 0) {
+      const y = (maxPitch - p) * rowH + rowH;
+      parts.push(`<line class="gridline-beat" x1="0" y1="${y}" x2="${width}" y2="${y}"/>`);
+    }
+  }
+  // Harmony notes (drawn first so main sits on top).
+  for (const tr of voices) for (const n of tr) appendNoteRect(parts, n, minPitch, maxPitch, rowH, width, ticksTotal, true);
+  for (const n of main.notes) appendNoteRect(parts, n, minPitch, maxPitch, rowH, width, ticksTotal, false);
+
+  parts.push('</svg>');
+  container.innerHTML = parts.join('');
+}
+
+// Drum view: one labeled lane per instrument instead of a pitch grid.
+function renderDrumRoll(container) {
+  const { main, bars } = STATE.currentResult;
+  if (main.notes.length === 0) { container.innerHTML = ''; return; }
+
+  // Collect used instruments, order: cymbals/perc on top, kick at bottom.
+  const LANE_ORDER = [49, 51, 46, 42, 54, 70, 56, 75, 63, 62, 50, 47, 45, 37, 39, 38, 36];
+  const used = [...new Set(main.notes.map(n => n.pitch))];
+  used.sort((a, b) => LANE_ORDER.indexOf(a) - LANE_ORDER.indexOf(b));
+
+  const ticksTotal = bars * main.ticksPerBar;
+  const gutter = 78;
+  const width = 900;
+  const rowH = 20;
+  const height = used.length * rowH;
+  const totalSteps = bars * STEPS_PER_BAR;
+  const laneOf = new Map(used.map((p, i) => [p, i]));
+
+  const parts = [`<svg viewBox="0 0 ${width + gutter} ${height}" preserveAspectRatio="none">`];
+
+  // Lane backgrounds (alternating) + labels.
+  for (let i = 0; i < used.length; i++) {
+    if (i % 2 === 0) {
+      parts.push(`<rect x="${gutter}" y="${i * rowH}" width="${width}" height="${rowH}" fill="rgba(0,0,0,0.025)"/>`);
+    }
+    const label = DRUM_LABELS[used[i]] ?? used[i];
+    parts.push(`<text x="4" y="${i * rowH + rowH / 2 + 4}" class="drum-label">${label}</text>`);
+  }
+  // Vertical gridlines.
+  for (let i = 0; i <= totalSteps; i++) {
+    const x = gutter + (i / totalSteps) * width;
+    const cls = i % STEPS_PER_BAR === 0 ? 'gridline-bar'
+              : i % STEPS_PER_BEAT === 0 ? 'gridline-beat'
+              : 'gridline';
+    parts.push(`<line class="${cls}" x1="${x}" y1="0" x2="${x}" y2="${height}"/>`);
+  }
+  // Hits — opacity follows velocity so accents/ghosts are visible.
+  for (const n of main.notes) {
+    const lane = laneOf.get(n.pitch);
+    const x = gutter + (n.startTicks / ticksTotal) * width;
+    const w = Math.max(3, (n.durationTicks / ticksTotal) * width * 0.8);
+    const y = lane * rowH + 3;
+    const op = (0.35 + (n.velocity / 127) * 0.65).toFixed(2);
+    parts.push(`<rect class="note" x="${x}" y="${y}" width="${w}" height="${rowH - 6}" rx="2" opacity="${op}"/>`);
+  }
+
+  parts.push('</svg>');
+  container.innerHTML = parts.join('');
+}
+
+function appendNoteRect(parts, n, minPitch, maxPitch, rowH, width, ticksTotal, harm) {
+  const x = (n.startTicks / ticksTotal) * width;
+  let w = (n.durationTicks / ticksTotal) * width;
+  if (w < 2) w = 2;
+  const y = (maxPitch - n.pitch) * rowH;
+  const cls = harm ? 'note harm' : 'note';
+  parts.push(`<rect class="${cls}" x="${x}" y="${y}" width="${w}" height="${rowH - 1}" rx="2"/>`);
+}
+
+// ---------- PLAYBACK (Tone.js) ----------
+// ---------- DRUM KIT (Tone.js synthesis, no samples needed) ----------
+let drumKit = null;
+
+function ensureDrumKit() {
+  if (drumKit) return;
+  const kick = new Tone.MembraneSynth({
+    pitchDecay: 0.04, octaves: 6,
+    envelope: { attack: 0.001, decay: 0.35, sustain: 0.005, release: 0.1 },
+  }).toDestination();
+
+  const tom = new Tone.MembraneSynth({
+    pitchDecay: 0.06, octaves: 3,
+    envelope: { attack: 0.001, decay: 0.3, sustain: 0.01, release: 0.1 },
+  }).toDestination();
+
+  const snare = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: { attack: 0.001, decay: 0.16, sustain: 0 },
+  });
+  snare.chain(new Tone.Filter(1800, 'bandpass', -12), new Tone.Volume(-4), Tone.Destination);
+
+  const clap = new Tone.NoiseSynth({
+    noise: { type: 'pink' },
+    envelope: { attack: 0.003, decay: 0.22, sustain: 0 },
+  });
+  clap.chain(new Tone.Filter(1200, 'bandpass'), new Tone.Volume(-6), Tone.Destination);
+
+  const hat = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: { attack: 0.001, decay: 0.045, sustain: 0 },
+  });
+  hat.chain(new Tone.Filter(9000, 'highpass'), new Tone.Volume(-12), Tone.Destination);
+
+  const ohat = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: { attack: 0.001, decay: 0.28, sustain: 0 },
+  });
+  ohat.chain(new Tone.Filter(8000, 'highpass'), new Tone.Volume(-14), Tone.Destination);
+
+  const metal = new Tone.MetalSynth({
+    envelope: { attack: 0.001, decay: 0.6, release: 0.1 },
+    harmonicity: 5.1, modulationIndex: 24, resonance: 4000, octaves: 1.2,
+  });
+  metal.chain(new Tone.Volume(-16), Tone.Destination);
+
+  const perc = new Tone.MembraneSynth({
+    pitchDecay: 0.02, octaves: 2,
+    envelope: { attack: 0.001, decay: 0.12, sustain: 0, release: 0.05 },
+  });
+  perc.chain(new Tone.Volume(-6), Tone.Destination);
+
+  drumKit = { kick, tom, snare, clap, hat, ohat, metal, perc };
+}
+
+// Route a GM drum pitch to the right synth voice.
+function triggerDrum(gmPitch, time, vel, dur) {
+  const k = drumKit;
+  if (!k) return;
+  switch (gmPitch) {
+    case 36: k.kick.triggerAttackRelease('C1', 0.25, time, vel); break;
+    case 38: k.snare.triggerAttackRelease(0.16, time, vel); break;
+    case 37: k.snare.triggerAttackRelease(0.05, time, vel * 0.8); break;
+    case 39: k.clap.triggerAttackRelease(0.2, time, vel); break;
+    case 42: k.hat.triggerAttackRelease(0.04, time, vel); break;
+    case 46: k.ohat.triggerAttackRelease(0.25, time, vel); break;
+    case 49: k.metal.triggerAttackRelease('C5', 0.8, time, vel * 0.7); break;
+    case 51: k.metal.triggerAttackRelease('D5', 0.4, time, vel * 0.5); break;
+    case 45: k.tom.triggerAttackRelease('G2', 0.25, time, vel); break;
+    case 47: k.tom.triggerAttackRelease('B2', 0.25, time, vel); break;
+    case 50: k.tom.triggerAttackRelease('D3', 0.25, time, vel); break;
+    case 54: k.hat.triggerAttackRelease(0.08, time, vel * 0.8); break;
+    case 56: k.metal.triggerAttackRelease('A5', 0.12, time, vel * 0.6); break;
+    case 70: k.hat.triggerAttackRelease(0.06, time, vel * 0.7); break;
+    case 75: k.perc.triggerAttackRelease('E5', 0.07, time, vel); break;
+    case 63: k.perc.triggerAttackRelease('C4', 0.12, time, vel); break;
+    case 62: k.perc.triggerAttackRelease('A3', 0.08, time, vel); break;
+    default: k.perc.triggerAttackRelease('C4', 0.1, time, vel);
+  }
+}
+
+async function ensureSynths() {
+  await Tone.start();
+  if (!synthMain) {
+    synthMain = new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: 'sawtooth' },
+      envelope: { attack: 0.005, decay: 0.18, sustain: 0.25, release: 0.12 },
+    });
+    const filter = new Tone.Filter(2200, 'lowpass');
+    const dist = new Tone.Distortion(0.15);
+    synthMain.chain(filter, dist, Tone.Destination);
+  }
+  if (!synthHarm) {
+    synthHarm = new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: 'square' },
+      envelope: { attack: 0.005, decay: 0.15, sustain: 0.2, release: 0.1 },
+    });
+    const filter = new Tone.Filter(1800, 'lowpass');
+    const vol = new Tone.Volume(-6);
+    synthHarm.chain(filter, vol, Tone.Destination);
+  }
+}
+
+function killAllPlayback() {
+  // The order matters: dispose scheduled events first, then silence voices.
+  if (transportPart) {
+    try { transportPart.stop(0); transportPart.dispose(); } catch (e) {}
+    transportPart = null;
+  }
+  if (typeof Tone !== 'undefined' && Tone.Transport) {
+    Tone.Transport.stop();
+    Tone.Transport.cancel(0);
+  }
+  if (synthMain) synthMain.releaseAll();
+  if (synthHarm) synthHarm.releaseAll();
+}
+
+async function play() {
+  if (playStarting) return;       // ignore rapid double-clicks while we set up
+  playStarting = true;
+  try {
+    if (!STATE.currentResult) generate();
+    await ensureSynths();
+    if (STATE.currentResult.isDrums) ensureDrumKit();
+    killAllPlayback();
+
+    const { main, voices, bpm, isDrums } = STATE.currentResult;
+    Tone.Transport.bpm.value = bpm;
+    const secPerTick = 60 / (bpm * PPQ);
+    // Direct MIDI→Hz instead of allocating a Tone.Frequency object per note.
+    const midiToHz = m => 440 * Math.pow(2, (m - 69) / 12);
+
+    const events = [];
+    for (const n of main.notes) {
+      events.push(isDrums
+        ? {
+            time: n.startTicks * secPerTick,
+            midi: n.pitch,
+            dur: Math.max(0.04, n.durationTicks * secPerTick),
+            vel: n.velocity / 127,
+            synth: 'drum',
+          }
+        : {
+            time: n.startTicks * secPerTick,
+            pitch: midiToHz(n.pitch),
+            dur: Math.max(0.04, n.durationTicks * secPerTick),
+            vel: n.velocity / 127,
+            synth: 'main',
+          });
+    }
+    for (const tr of voices) {
+      for (const n of tr) {
+        events.push({
+          time: n.startTicks * secPerTick,
+          pitch: midiToHz(n.pitch),
+          dur: Math.max(0.04, n.durationTicks * secPerTick),
+          vel: n.velocity / 127,
+          synth: 'harm',
+        });
+      }
+    }
+
+    transportPart = new Tone.Part((time, ev) => {
+      if (ev.synth === 'drum') {
+        triggerDrum(ev.midi, time, ev.vel, ev.dur);
+        return;
+      }
+      const synth = ev.synth === 'main' ? synthMain : synthHarm;
+      synth.triggerAttackRelease(ev.pitch, ev.dur, time, ev.vel);
+    }, events);
+    transportPart.start(0);
+
+    // Hard-release everything when the phrase ends — without this, long final
+    // notes could outlive Transport.stop and ring indefinitely.
+    const totalSec = STATE.currentResult.bars * main.ticksPerBar * secPerTick;
+    Tone.Transport.scheduleOnce(t => {
+      if (synthMain) synthMain.releaseAll(t);
+      if (synthHarm) synthHarm.releaseAll(t);
+      Tone.Transport.stop(t + 0.05);
+    }, totalSec + 0.1);
+
+    Tone.Transport.start();
+  } finally {
+    playStarting = false;
+  }
+}
+
+function stop() {
+  killAllPlayback();
+}
+
+// ---------- MIDI DOWNLOAD ----------
+function download() {
+  if (!STATE.currentResult) generate();
+  const { main, voices, bpm, isDrums } = STATE.currentResult;
+  const seedHex = (STATE.currentSeed >>> 0).toString(16).padStart(8, '0');
+
+  let tracks, filename;
+  if (isDrums) {
+    // GM drums live on channel 10 (index 9); no program change needed.
+    tracks = [{ name: 'Drums', channel: 9, notes: main.notes }];
+    filename = `drums_${STATE.drumStyle}_${seedHex}.mid`;
+  } else {
+    tracks = [
+      { name: 'Riff', channel: 0, program: 81, notes: main.notes }, // 81 = Lead 1 (square)
+    ];
+    voices.forEach((v, i) => {
+      tracks.push({ name: `Stämma ${i + 1}`, channel: i + 1, program: 80, notes: v });
+    });
+    const ui = readUI();
+    filename = `riff_${ui.rootName.replace('#', 's')}_${ui.scaleName}_${STATE.style}_${seedHex}.mid`;
+  }
+
+  const bytes = writeMidi({ bpm, tracks });
+  downloadMidi(bytes, filename);
+}
+
+</script>
+</body>
+</html>

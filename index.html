@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Riffgen — musikalisk MIDI-generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>riffgen<span class="dot">.</span></h1>
+    <p class="subtitle">Skapa musikaliska single-note-riff, basgångar och melodier som MIDI</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Tonart & form</h2>
+      <div class="grid">
+        <label>Grundton
+          <select id="root">
+            <option>C</option><option>C#</option><option>D</option><option>D#</option>
+            <option>E</option><option>F</option><option>F#</option><option>G</option>
+            <option>G#</option><option selected>A</option><option>A#</option><option>B</option>
+          </select>
+        </label>
+        <label>Skala
+          <select id="scale">
+            <option value="minor" selected>Moll (naturlig)</option>
+            <option value="harmonic-minor">Harmonisk moll</option>
+            <option value="melodic-minor">Melodisk moll</option>
+            <option value="phrygian">Frygisk</option>
+            <option value="dorian">Dorisk</option>
+            <option value="major">Dur</option>
+            <option value="mixolydian">Mixolydisk</option>
+            <option value="lydian">Lydisk</option>
+            <option value="locrian">Lokrisk</option>
+            <option value="minor-pent">Mollpentatonisk</option>
+            <option value="major-pent">Durpentatonisk</option>
+            <option value="blues">Blues</option>
+          </select>
+        </label>
+        <label>Antal takter
+          <select id="bars">
+            <option>2</option><option value="4" selected>4</option><option>8</option><option>16</option>
+          </select>
+        </label>
+        <label>BPM
+          <input type="number" id="bpm" value="124" min="40" max="220">
+        </label>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-progression">
+      <h2>Ackordföljd <span class="optional">(valfritt)</span></h2>
+      <div class="row">
+        <input type="text" id="progression" placeholder="t.ex.  i  VI  III  VII   eller   Am F C G   eller   i / VII / VI / VII">
+        <button id="clear-prog" class="ghost">Rensa</button>
+      </div>
+      <p class="hint">Romerska siffror (i, V, ♭VII, VImaj7) eller ackordnamn (Am, F#m7). En per takt — färre ackord sträcks ut.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Stil</h2>
+      <div class="preset-picker">
+        <label class="preset-label">
+          Välj stil
+          <select id="preset-select"></select>
+        </label>
+        <div id="extensions-wrap" class="extensions-wrap" style="display:none">
+          <label class="preset-label">
+            Ackord-typ
+            <select id="extensions-select"></select>
+          </label>
+        </div>
+        <div id="preset-tip" class="preset-tip"></div>
+      </div>
+      <div class="sliders" id="sliders">
+        <!-- populated by app.js -->
+      </div>
+    </section>
+
+    <section class="panel" id="panel-voices">
+      <h2>Stämmor</h2>
+      <div id="voices"></div>
+      <button id="add-voice" class="ghost">+ Lägg till stämma</button>
+      <p class="hint">Stämmor läggs till över/under huvudriffet. Diatonisk = snäpper till skalan. Parallell = bokstavlig transponering (kromatisk).</p>
+    </section>
+
+    <section class="actions">
+      <button id="random" class="big primary">🎲 RANDOM</button>
+      <button id="generate" class="big">Generera</button>
+      <button id="play" class="big">▶ Spela</button>
+      <button id="stop" class="big">■ Stopp</button>
+      <button id="download" class="big">⤓ MIDI</button>
+    </section>
+
+    <section class="panel">
+      <div class="row between">
+        <h2>Förhandsvisning</h2>
+        <div class="seed" id="seed-display"></div>
+      </div>
+      <div id="piano-roll" class="piano-roll"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Hela genereringen sker lokalt i din webbläsare. MIDI-filer kan importeras i Ableton, Logic, FL Studio m.fl.</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/tone@14.8.49/build/Tone.js"></script>
+  <script src="theory.js"></script>
+  <script src="midi.js"></script>
+  <script src="corpus.js"></script>
+  <script src="generator.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
