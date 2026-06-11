@@ -67,12 +67,12 @@ const GENRE_GROOVE = {
 const RECIPES = {
   bass: {
     french:  { engine: 'riff', style: 'genesis', tip: 'Justice-style bass: distorted saw, short sustain, lowpass. 110–125 BPM.' },
-    disco:   { engine: 'arp', pattern: 'octave', sliders: { density: 0.30, register: 0.05, length: 0.45 }, tip: 'Octave bounce à la Chic / "Around the World". Finger bass or plucky synth bass. 110–122 BPM.' },
+    disco:   { engine: 'arp', pattern: 'octave', sliders: { density: 0.30, register: 0.05, length: 0.45, variation: 0.35 }, tip: 'Octave bounce à la Chic / "Around the World". Raise Variation for fifth substitutions and walk-up turnarounds, Chromatics for approach notes. 110–122 BPM.' },
     rock:    { engine: 'riff', style: 'rock', sliders: { register: 0.15, length: 0.40 }, tip: 'Pentatonic power bass — double the guitar riff. 90–140 BPM.' },
     reggae:  { engine: 'riff', style: 'reggae', sliders: { density: 0.35, syncopation: 0.50, length: 0.60, register: 0.05 }, tip: 'Dub bass: round, rolled-off top end — the rests carry the groove. 70–90 BPM.' },
     latin:   { engine: 'riff', style: 'latin', sliders: { syncopation: 0.60 }, tip: 'Tumbao feel — syncopated root/fifth. Pair with the Latin drums. 90–110 BPM.' },
     baroque: { engine: 'riff', style: 'baroque', sliders: { length: 0.55, density: 0.45 }, tip: 'Continuo: a walking bass voice — cello or organ pedal. Sits beautifully under a fugue lead.' },
-    jazz:    { engine: 'walking', sliders: { density: 0.40 }, tip: 'Walking bass: root on beat 1, chromatic approach into every new chord. Swing the 8ths in your DAW. Upright/finger bass.' },
+    jazz:    { engine: 'walking', sliders: { density: 0.40, chromatic: 0.70 }, tip: 'Walking bass: root on beat 1, chromatic approach into every new chord. Swing the 8ths in your DAW. Upright/finger bass.' },
     synth:   { engine: 'riff', style: 'acid', acid: true, sliders: { density: 0.65, length: 0.35 }, tip: '303 acid: overlapping notes = glide on TB-303-style synths (set mono + glide). The accents do the rest. 125–140 BPM.' },
     lofi:    { engine: 'riff', style: 'pulse', sliders: { density: 0.25, length: 0.70 }, tip: 'Half-time sub bass, few notes, let it sway. Sine or soft saw. 70–90 BPM.' },
     minimal: { engine: 'riff', style: 'pulse', sliders: { density: 0.30, variation: 0.10 }, tip: 'Pulsing root bass — hypnotic repetition. Sidechain against the kick. 120–130 BPM.' },
