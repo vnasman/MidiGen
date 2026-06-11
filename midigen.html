@@ -3064,51 +3064,52 @@ let drumKit = null;
 
 function ensureDrumKit() {
   if (drumKit) return;
+  ensureMaster();
   const kick = new Tone.MembraneSynth({
     pitchDecay: 0.04, octaves: 6,
     envelope: { attack: 0.001, decay: 0.35, sustain: 0.005, release: 0.1 },
-  }).toDestination();
+  }).connect(masterBus);
 
   const tom = new Tone.MembraneSynth({
     pitchDecay: 0.06, octaves: 3,
     envelope: { attack: 0.001, decay: 0.3, sustain: 0.01, release: 0.1 },
-  }).toDestination();
+  }).connect(masterBus);
 
   const snare = new Tone.NoiseSynth({
     noise: { type: 'white' },
     envelope: { attack: 0.001, decay: 0.16, sustain: 0 },
   });
-  snare.chain(new Tone.Filter(1800, 'bandpass', -12), new Tone.Volume(-4), Tone.Destination);
+  snare.chain(new Tone.Filter(1800, 'bandpass', -12), new Tone.Volume(-4), masterBus);
 
   const clap = new Tone.NoiseSynth({
     noise: { type: 'pink' },
     envelope: { attack: 0.003, decay: 0.22, sustain: 0 },
   });
-  clap.chain(new Tone.Filter(1200, 'bandpass'), new Tone.Volume(-6), Tone.Destination);
+  clap.chain(new Tone.Filter(1200, 'bandpass'), new Tone.Volume(-6), masterBus);
 
   const hat = new Tone.NoiseSynth({
     noise: { type: 'white' },
     envelope: { attack: 0.001, decay: 0.045, sustain: 0 },
   });
-  hat.chain(new Tone.Filter(9000, 'highpass'), new Tone.Volume(-12), Tone.Destination);
+  hat.chain(new Tone.Filter(9000, 'highpass'), new Tone.Volume(-12), masterBus);
 
   const ohat = new Tone.NoiseSynth({
     noise: { type: 'white' },
     envelope: { attack: 0.001, decay: 0.28, sustain: 0 },
   });
-  ohat.chain(new Tone.Filter(8000, 'highpass'), new Tone.Volume(-14), Tone.Destination);
+  ohat.chain(new Tone.Filter(8000, 'highpass'), new Tone.Volume(-14), masterBus);
 
   const metal = new Tone.MetalSynth({
     envelope: { attack: 0.001, decay: 0.6, release: 0.1 },
     harmonicity: 5.1, modulationIndex: 24, resonance: 4000, octaves: 1.2,
   });
-  metal.chain(new Tone.Volume(-16), Tone.Destination);
+  metal.chain(new Tone.Volume(-16), masterBus);
 
   const perc = new Tone.MembraneSynth({
     pitchDecay: 0.02, octaves: 2,
     envelope: { attack: 0.001, decay: 0.12, sustain: 0, release: 0.05 },
   });
-  perc.chain(new Tone.Volume(-6), Tone.Destination);
+  perc.chain(new Tone.Volume(-6), masterBus);
 
   drumKit = { kick, tom, snare, clap, hat, ohat, metal, perc };
 }
@@ -3139,25 +3140,38 @@ function triggerDrum(gmPitch, time, vel, dur) {
   }
 }
 
+// Shared master bus: gain headroom into a limiter so chord stabs (many
+// simultaneous voices) never clip or grind. No distortion anywhere — saw
+// through a lowpass stays plenty electronic, but clean.
+let masterBus = null;
+
+function ensureMaster() {
+  if (masterBus) return masterBus;
+  const limiter = new Tone.Limiter(-1.5);
+  limiter.toDestination();
+  masterBus = new Tone.Gain(0.7);
+  masterBus.connect(limiter);
+  return masterBus;
+}
+
 async function ensureSynths() {
   await Tone.start();
+  ensureMaster();
   if (!synthMain) {
     synthMain = new Tone.PolySynth(Tone.Synth, {
       oscillator: { type: 'sawtooth' },
-      envelope: { attack: 0.005, decay: 0.18, sustain: 0.25, release: 0.12 },
+      envelope: { attack: 0.008, decay: 0.2, sustain: 0.22, release: 0.15 },
     });
-    const filter = new Tone.Filter(2200, 'lowpass');
-    const dist = new Tone.Distortion(0.15);
-    synthMain.chain(filter, dist, Tone.Destination);
+    synthMain.chain(new Tone.Filter(1900, 'lowpass', -24), masterBus);
   }
   if (!synthHarm) {
+    // Triangle for harmony voices — square + saw together buzzes; triangle
+    // sits cleanly underneath the main line.
     synthHarm = new Tone.PolySynth(Tone.Synth, {
-      oscillator: { type: 'square' },
-      envelope: { attack: 0.005, decay: 0.15, sustain: 0.2, release: 0.1 },
+      oscillator: { type: 'triangle' },
+      envelope: { attack: 0.008, decay: 0.18, sustain: 0.2, release: 0.12 },
     });
-    const filter = new Tone.Filter(1800, 'lowpass');
-    const vol = new Tone.Volume(-6);
-    synthHarm.chain(filter, vol, Tone.Destination);
+    synthHarm.chain(new Tone.Filter(1600, 'lowpass'), new Tone.Volume(-5), masterBus);
   }
 }
 
