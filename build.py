@@ -8,6 +8,7 @@ no server required.
 """
 from pathlib import Path
 import re
+import urllib.parse
 
 ROOT = Path(__file__).parent
 
@@ -27,6 +28,19 @@ def main():
         html,
         count=1,
     )
+
+    # Inline the SVG favicon as a data URI so the standalone file keeps its
+    # tab icon; drop the PNG fallback links (they'd 404 when shared alone).
+    svg = (ROOT / 'favicon.svg').read_text(encoding='utf-8')
+    data_uri = 'data:image/svg+xml,' + urllib.parse.quote(svg.strip(), safe='')
+    html = re.sub(
+        r'<link rel="icon" href="favicon\.svg" type="image/svg\+xml">',
+        f'<link rel="icon" href="{data_uri}" type="image/svg+xml">',
+        html,
+        count=1,
+    )
+    html = re.sub(r'\s*<link rel="icon" href="favicon-32\.png"[^>]*>', '', html)
+    html = re.sub(r'\s*<link rel="apple-touch-icon"[^>]*>', '', html)
 
     # Strip local script tags (Tone.js stays as CDN).
     for f in JS_ORDER:
