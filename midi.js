@@ -39,6 +39,15 @@ function buildTrackEvents(notes, opts = {}) {
     const ch = opts.channel ?? 0;
     events.push({ tick: 0, order: 1, bytes: [0xC0 | ch, opts.program & 0x7F] });
   }
+  // Pitch-bend events: 14-bit value, center 8192 = no bend. Cents map onto the
+  // universal ±2-semitone default bend range (±200 cents = full deflection).
+  if (opts.bends) {
+    const ch = opts.channel ?? 0;
+    for (const b of opts.bends) {
+      const v = Math.max(0, Math.min(16383, 8192 + Math.round(b.cents * 8192 / 200)));
+      events.push({ tick: b.tick, order: 1.5, bytes: [0xE0 | ch, v & 0x7F, (v >> 7) & 0x7F] });
+    }
+  }
   // Notes -> on/off events
   for (const n of notes) {
     const ch = n.channel ?? opts.channel ?? 0;
@@ -85,7 +94,7 @@ function writeMidi({ bpm = 120, timeSig = [4, 4], tracks = [] }) {
   const conductor = chunk('MTrk', buildConductorTrack(bpm, timeSig));
   const trackChunks = [];
   for (const t of tracks) {
-    const body = buildTrackEvents(t.notes, { name: t.name, channel: t.channel, program: t.program });
+    const body = buildTrackEvents(t.notes, { name: t.name, channel: t.channel, program: t.program, bends: t.bends });
     trackChunks.push(...chunk('MTrk', body));
   }
 

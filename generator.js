@@ -1057,6 +1057,80 @@ function applyGroove(notes, swing, pocket, ticksPerStep, isDrums, rng) {
   }
 }
 
+// ----- PITCH BENDS (scoops, vibrato, fall-offs) -----
+// Vocal-style bend gestures, applied where they're idiomatic:
+//   scoop    — slide up into a note (phrase starts especially)
+//   vibrato  — slow sine on sustained notes, starting after the onset settles
+//   fall-off — pitch drops away on the last note of a phrase
+// All values stay within ±200 cents, the universal ±2-semitone MIDI bend-range
+// default, so exports sound identical on any synth. Bends are channel-wide in
+// MIDI, which is why this only runs on (mostly monophonic) melodic material.
+function applyPitchBends(result, amount, rng) {
+  if (!amount || amount <= 0) { result.bends = []; return; }
+  const notes = [...result.notes].sort((a, b) => a.startTicks - b.startTicks);
+  const bends = [];
+  const GAP = 480;   // ≥ one beat of silence = phrase boundary
+  const push = (tick, cents) => bends.push({
+    tick: Math.round(tick),
+    cents: Math.max(-200, Math.min(200, Math.round(cents))),
+  });
+
+  for (let i = 0; i < notes.length; i++) {
+    const n = notes[i];
+    const prevEnd = i > 0 ? notes[i - 1].startTicks + notes[i - 1].durationTicks : -Infinity;
+    const nextStart = i + 1 < notes.length ? notes[i + 1].startTicks : Infinity;
+    const phraseStart = n.startTicks - prevEnd >= GAP;
+    const phraseEnd = nextStart - (n.startTicks + n.durationTicks) >= GAP || i === notes.length - 1;
+    const start = n.startTicks, dur = n.durationTicks;
+
+    // Scoop in — much more likely on phrase starts.
+    const scoopProb = phraseStart ? 0.35 + amount * 0.5 : amount * 0.15;
+    let scooped = false;
+    if (rng() < scoopProb) {
+      scooped = true;
+      const depth = -(70 + rng() * 60 + amount * 70);
+      const len = Math.max(36, Math.min(110, dur * 0.35));
+      for (let t = 0; t < len; t += 18) push(start + t, depth * (1 - t / len));
+      push(start + len, 0);
+    } else {
+      push(start, 0);   // reset so a previous gesture never bleeds into this note
+    }
+
+    // Fall-off decision first so vibrato knows where to stop.
+    const hasFall = phraseEnd && rng() < amount * 0.6;
+
+    // Vibrato on sustained notes.
+    if (dur >= 600 && rng() < 0.2 + amount * 0.55) {
+      const depth = 15 + amount * 35;
+      const vStart = start + Math.max(dur * 0.35, scooped ? 130 : 0);
+      const vEnd = start + dur * (hasFall ? 0.68 : 0.93);
+      const period = 150;   // ≈ 6 Hz at 120 BPM — natural vocal vibrato
+      for (let t = vStart; t < vEnd; t += 22) {
+        push(t, Math.sin(((t - vStart) / period) * Math.PI * 2) * depth);
+      }
+      push(vEnd, 0);
+    }
+
+    // Fall-off over the note's tail.
+    if (hasFall) {
+      const fStart = start + dur * 0.72;
+      const fLen = Math.max(36, dur * 0.28);
+      const depth = -(110 + amount * 90);
+      for (let t = 0; t <= fLen; t += 18) push(fStart + t, depth * (t / fLen));
+    }
+  }
+
+  // Sort and dedupe (same tick → the later gesture wins, e.g. next note's
+  // scoop start overrides the previous note's fall-off tail).
+  bends.sort((a, b) => a.tick - b.tick);
+  const out = [];
+  for (const b of bends) {
+    if (out.length && out[out.length - 1].tick === b.tick) out[out.length - 1] = b;
+    else out.push(b);
+  }
+  result.bends = out;
+}
+
 // ----- SAME-PITCH OVERLAP TRIM -----
 // Two overlapping notes of the SAME pitch confuse synths and DAWs: the first
 // note-off cuts the second note short (MIDI has no per-note identity). Trim

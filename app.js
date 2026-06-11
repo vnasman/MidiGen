@@ -13,7 +13,12 @@ const SLIDER_DEFS = [
   { id: 'chromatic',   label: 'Chromatics',  levels: ['Pure', 'Hint', 'Some', 'Spicy', 'Heavy'] },
   { id: 'swing',       label: 'Swing',       levels: ['Straight', 'Subtle', 'Light', 'Swung', 'Triplet'] },
   { id: 'pocket',      label: 'Pocket',      levels: ['On grid', 'Relaxed', 'Laid-back', 'Dragging', 'Dilla'] },
+  { id: 'bends',       label: 'Pitch bends', levels: ['None', 'Subtle', 'Some', 'Expressive', 'Wild'] },
 ];
+
+// Pitch bends are channel-wide in MIDI, so they only suit (mostly monophonic)
+// melodic roles. The control is hidden elsewhere.
+const BEND_ROLES = ['melody', 'lead', 'bass'];
 
 // ── Role × Genre matrix ──────────────────────────────────────────────
 // Each (role, genre) combination resolves to a recipe: engine + style DNA +
@@ -63,14 +68,14 @@ const GENRES = [
 ];
 
 const ROLE_BASE = {
-  bass:   { density: 0.50, variation: 0.20, syncopation: 0.35, length: 0.50, register: 0.10, range: 0.30, chromatic: 0.05, swing: 0, pocket: 0 },
-  lead:   { density: 0.60, variation: 0.40, syncopation: 0.40, length: 0.45, register: 0.55, range: 0.50, chromatic: 0.05, swing: 0, pocket: 0 },
-  melody: { density: 0.25, variation: 0.60, syncopation: 0.15, length: 0.85, register: 0.60, range: 0.45, chromatic: 0.00, swing: 0, pocket: 0 },
-  chord:  { density: 0.45, variation: 0.30, syncopation: 0.50, length: 0.30, register: 0.55, range: 0.35, chromatic: 0.00, swing: 0, pocket: 0 },
-  arp:    { density: 0.70, variation: 0.20, syncopation: 0.10, length: 0.30, register: 0.55, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
-  drums:  { density: 0.50, variation: 0.35, syncopation: 0.25, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
-  perc:   { density: 0.55, variation: 0.30, syncopation: 0.35, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
-  machine:{ density: 0.50, variation: 0.15, syncopation: 0.20, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
+  bass:   { density: 0.50, variation: 0.20, syncopation: 0.35, length: 0.50, register: 0.10, range: 0.30, chromatic: 0.05, swing: 0, pocket: 0, bends: 0 },
+  lead:   { density: 0.60, variation: 0.40, syncopation: 0.40, length: 0.45, register: 0.55, range: 0.50, chromatic: 0.05, swing: 0, pocket: 0, bends: 0 },
+  melody: { density: 0.25, variation: 0.60, syncopation: 0.15, length: 0.85, register: 0.60, range: 0.45, chromatic: 0.00, swing: 0, pocket: 0, bends: 0.25 },
+  chord:  { density: 0.45, variation: 0.30, syncopation: 0.50, length: 0.30, register: 0.55, range: 0.35, chromatic: 0.00, swing: 0, pocket: 0, bends: 0 },
+  arp:    { density: 0.70, variation: 0.20, syncopation: 0.10, length: 0.30, register: 0.55, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0, bends: 0 },
+  drums:  { density: 0.50, variation: 0.35, syncopation: 0.25, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0, bends: 0 },
+  perc:   { density: 0.55, variation: 0.30, syncopation: 0.35, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0, bends: 0 },
+  machine:{ density: 0.50, variation: 0.15, syncopation: 0.20, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0, bends: 0 },
 };
 
 // Groove defaults per genre — merged between ROLE_BASE and recipe overrides.
@@ -228,7 +233,7 @@ const EXTENSION_OPTIONS = [
   { value: 'thirteenth', label: '13:a (full jazz)' },
 ];
 
-let synthMain, synthHarm, transportPart;
+let synthMain, synthHarm, synthBend, transportPart;
 let playStarting = false;  // guard against rapid double-clicks on Play
 
 // ---------- INIT ----------
@@ -430,6 +435,10 @@ function refreshPanelVisibility() {
     const ctrl = document.querySelector(`[data-control="${id}"]`);
     if (ctrl) ctrl.style.display = isDrums ? 'none' : '';
   }
+
+  // Pitch bends only suit melodic roles (bend messages are channel-wide).
+  const bendCtrl = document.querySelector('[data-control="bends"]');
+  if (bendCtrl) bendCtrl.style.display = BEND_ROLES.includes(STATE.role) ? '' : 'none';
 }
 
 // Show / sync the extensions dropdown (only meaningful for chord-role presets).
@@ -651,6 +660,13 @@ function generate(opts = {}) {
   applyGroove(result.notes, STATE.sliders.swing ?? 0, STATE.sliders.pocket ?? 0,
               result.ticksPerBar / 16, false, mulberry32(seed ^ 0xBEA7));
   trimSamePitchOverlaps(result.notes);
+
+  // Pitch bends (scoops/vibrato/fall-offs) — melodic roles only.
+  if (BEND_ROLES.includes(STATE.role) && (STATE.sliders.bends ?? 0) > 0) {
+    applyPitchBends(result, STATE.sliders.bends, mulberry32(seed ^ 0xB47D));
+  } else {
+    result.bends = [];
+  }
 
   // Build harmonized voices with optional canonic delay. Done in a single pass:
   // pre-filter source notes by whether they'd still fall inside the phrase, then
@@ -947,6 +963,15 @@ async function ensureSynths() {
     });
     synthHarm.chain(new Tone.Filter(1600, 'lowpass'), new Tone.Volume(-5), masterBus);
   }
+  if (!synthBend) {
+    // Mono synth for bend playback: its detune Param can be automated, which
+    // a PolySynth can't. Melodies are monophonic enough that this works.
+    synthBend = new Tone.Synth({
+      oscillator: { type: 'sawtooth' },
+      envelope: { attack: 0.008, decay: 0.2, sustain: 0.22, release: 0.15 },
+    });
+    synthBend.chain(new Tone.Filter(1900, 'lowpass', -24), masterBus);
+  }
 }
 
 function killAllPlayback() {
@@ -961,6 +986,11 @@ function killAllPlayback() {
   }
   if (synthMain) synthMain.releaseAll();
   if (synthHarm) synthHarm.releaseAll();
+  if (synthBend) {
+    synthBend.triggerRelease();
+    synthBend.detune.cancelScheduledValues(0);
+    synthBend.detune.value = 0;
+  }
 }
 
 async function play() {
@@ -978,6 +1008,8 @@ async function play() {
     // Direct MIDI→Hz instead of allocating a Tone.Frequency object per note.
     const midiToHz = m => 440 * Math.pow(2, (m - 69) / 12);
 
+    // Bent melodies route to the mono synth whose detune Param we can automate.
+    const useBendSynth = !isDrums && main.bends && main.bends.length > 0;
     const events = [];
     for (const n of main.notes) {
       // Insurance: a non-finite pitch becomes a NaN Hz voice that Tone.js can
@@ -996,8 +1028,13 @@ async function play() {
             pitch: midiToHz(n.pitch),
             dur: Math.max(0.04, n.durationTicks * secPerTick),
             vel: n.velocity / 127,
-            synth: 'main',
+            synth: useBendSynth ? 'mono' : 'main',
           });
+    }
+    if (useBendSynth) {
+      for (const b of main.bends) {
+        events.push({ time: b.tick * secPerTick, cents: b.cents, synth: 'bend' });
+      }
     }
     for (const tr of voices) {
       for (const n of tr) {
@@ -1015,6 +1052,14 @@ async function play() {
     transportPart = new Tone.Part((time, ev) => {
       if (ev.synth === 'drum') {
         triggerDrum(ev.midi, time, ev.vel, ev.dur);
+        return;
+      }
+      if (ev.synth === 'bend') {
+        synthBend.detune.setValueAtTime(ev.cents, time);
+        return;
+      }
+      if (ev.synth === 'mono') {
+        synthBend.triggerAttackRelease(ev.pitch, ev.dur, time, ev.vel);
         return;
       }
       const synth = ev.synth === 'main' ? synthMain : synthHarm;
@@ -1054,7 +1099,7 @@ function download() {
     filename = `drums_${STATE.drumStyle}_${seedHex}.mid`;
   } else {
     tracks = [
-      { name: 'Riff', channel: 0, program: 81, notes: main.notes }, // 81 = Lead 1 (square)
+      { name: 'Riff', channel: 0, program: 81, notes: main.notes, bends: main.bends }, // 81 = Lead 1 (square)
     ];
     voices.forEach((v, i) => {
       tracks.push({ name: `Voice ${i + 1}`, channel: i + 1, program: 80, notes: v });
