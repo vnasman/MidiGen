@@ -618,6 +618,12 @@ footer {
             <select id="extensions-select"></select>
           </label>
         </div>
+        <div id="machine-wrap" class="extensions-wrap" style="display:none">
+          <label class="preset-label">
+            Preset rhythm
+            <select id="machine-select"></select>
+          </label>
+        </div>
         <div id="preset-tip" class="preset-tip"></div>
       </div>
       <details class="tweaks" id="tweaks">
@@ -1300,7 +1306,93 @@ const DRUM_STYLES = {
     [GM.SHAKER]:      { prob: [0,0,0,0, .6,0,0,0, 0,0,0,0, .6,0,0,0], vel: 50, ghost: true },
     [GM.RIM]:         { prob: [0,0,0,0, 0,0,0,.25, 0,0,0,0, 0,.25,0,0], vel: 56, ghost: true },
   },
+
+  // ===== RHYTHM BOX (classic organ / drum machine presets) =====
+  // Transcribed from the preset-rhythm era: Ace Tone Rhythm Ace, Roland CR-78,
+  // home-organ accompaniment buttons. These LOOP — no fills, minimal jitter.
+  machineBossa: {
+    [GM.KICK]: { prob: [1,0,0,0, 0,0,.9,0, 1,0,0,0, 0,0,.9,0], vel: 98 },
+    [GM.RIM]:  { prob: [1,0,0,1, 0,0,1,0, 0,0,1,0, 0,1,0,0], vel: 78 },      // bossa clave
+    [GM.CHAT]: { prob: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], vel: 56 },
+    [GM.SHAKER]: { prob: [0,.3,0,.3, 0,.3,0,.3, 0,.3,0,.3, 0,.3,0,.3], vel: 44, ghost: true },
+  },
+  machineCha: {
+    [GM.KICK]:       { prob: [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0], vel: 96 },
+    [GM.RIM]:        { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], vel: 80 },
+    [GM.COWBELL]:    { prob: [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0], vel: 74 },
+    [GM.GUIRO_LONG]: { prob: [.8,0,0,0, 0,0,0,0, .8,0,0,0, 0,0,0,0], vel: 62 },
+    [GM.CONGA_OPEN]: { prob: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,1,1], vel: 84 }, // the "cha-cha"
+  },
+  machineRumba: {
+    [GM.CLAVE]:      { prob: [1,0,0,1, 0,0,1,0, 0,0,1,0, 1,0,0,0], vel: 84 }, // 3-2 son
+    [GM.KICK]:       { prob: [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0], vel: 92 },
+    [GM.CONGA_OPEN]: { prob: [0,0,.7,0, 0,0,.5,0, 0,0,.7,0, 0,0,.5,0], vel: 78 },
+    [GM.SHAKER]:     { prob: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], vel: 52, ghost: true },
+    [GM.RIM]:        { prob: [0,0,0,0, .8,0,0,0, 0,0,0,0, .8,0,0,0], vel: 62 },
+  },
+  machineSamba: {
+    [GM.KICK]:         { prob: [1,0,0,1, 0,0,1,0, 1,0,0,1, 0,0,1,0], vel: 96 }, // 3-3-2 surdo
+    [GM.SHAKER]:       { prob: [.85,.85,.85,.85, .85,.85,.85,.85, .85,.85,.85,.85, .85,.85,.85,.85], vel: 50, ghost: true },
+    [GM.WOODBLOCK_HI]: { prob: [0,0,.7,0, 0,.7,0,0, .7,0,0,.7, 0,0,.7,0], vel: 66 }, // agogô-ish
+    [GM.TAMB]:         { prob: [.5,0,0,0, .5,0,0,0, .5,0,0,0, .5,0,0,0], vel: 56, ghost: true },
+  },
+  machineMambo: {
+    [GM.COWBELL]:    { prob: [1,0,1,1, 0,1,0,1, 1,0,1,0, 1,1,0,1], vel: 72 }, // cáscara-style bell
+    [GM.KICK]:       { prob: [1,0,0,0, 0,0,.8,0, 1,0,0,0, 0,0,.8,0], vel: 94 },
+    [GM.CONGA_OPEN]: { prob: [0,0,0,0, .6,0,0,0, 0,0,0,0, .8,0,1,0], vel: 80 },
+    [GM.SHAKER]:     { prob: [0,.25,0,.25, 0,.25,0,.25, 0,.25,0,.25, 0,.25,0,.25], vel: 46, ghost: true },
+  },
+  machineBeguine: {
+    [GM.KICK]:     { prob: [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0], vel: 92 },
+    [GM.SNARE]:    { prob: [0,0,0,0, .8,0,0,0, 0,0,0,0, .8,0,0,0], vel: 56 },
+    [GM.RIM]:      { prob: [0,0,0,0, 0,0,1,0, 0,0,0,0, 0,0,1,0], vel: 72 },
+    [GM.SHAKER]:   { prob: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], vel: 50, ghost: true },
+    [GM.TRIANGLE]: { prob: [.4,0,0,0, 0,0,0,0, .4,0,0,0, 0,0,0,0], vel: 54 },
+  },
+  machineSwing: {
+    [GM.RIDE]:  { prob: [1,0,0,0, 1,0,1,0, 1,0,0,0, 1,0,1,0], vel: 74 },     // swing slider → triplet ride
+    [GM.CHAT]:  { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], vel: 54 },     // hat foot on 2 & 4
+    [GM.KICK]:  { prob: [1,0,0,0, 0,0,0,0, .6,0,0,0, 0,0,0,0], vel: 52 },    // feathered
+    [GM.SNARE]: { prob: [0,0,0,.2, 0,0,.2,0, 0,.2,0,0, 0,0,.25,0], vel: 40, ghost: true },
+  },
+  machineMarch: {
+    [GM.KICK]:         { prob: [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0], vel: 104 },
+    [GM.SNARE]:        { prob: [0,0,0,0, 1,0,.5,.5, 0,0,0,0, 1,0,.5,.5], vel: 84 },
+    [GM.WOODBLOCK_LO]: { prob: [.4,0,.4,0, .4,0,.4,0, .4,0,.4,0, .4,0,.4,0], vel: 54, ghost: true },
+    [GM.CRASH]:        { prob: [.25,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0], vel: 88 },
+  },
+  machineSlowRock: {
+    [GM.KICK]:  { prob: [1,0,0,0, 0,0,0,0, 1,0,.5,0, 0,0,0,0], vel: 96 },
+    [GM.SNARE]: { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], vel: 86 },
+    [GM.CHAT]:  { prob: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], vel: 60 },
+  },
+  machineRock: {
+    [GM.KICK]:  { prob: [1,0,0,0, 0,0,0,0, 1,0,.8,0, 0,0,0,0], vel: 102 },
+    [GM.SNARE]: { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], vel: 94 },
+    [GM.CHAT]:  { prob: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], vel: 64 },
+    [GM.OHAT]:  { prob: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,.3,0], vel: 74 },
+  },
+  machineDisco: {
+    [GM.KICK]:  { prob: [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0], vel: 102 },
+    [GM.SNARE]: { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], vel: 84 },
+    [GM.CHAT]:  { prob: [.8,.5,.8,.5, .8,.5,.8,.5, .8,.5,.8,.5, .8,.5,.8,.5], vel: 56 },
+    [GM.OHAT]:  { prob: [0,0,.9,0, 0,0,.9,0, 0,0,.9,0, 0,0,.9,0], vel: 76 },
+  },
+  machinePop: {
+    [GM.KICK]:     { prob: [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,1,0], vel: 96 },   // CR-78 pop
+    [GM.RIM]:      { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], vel: 70 },
+    [GM.CHAT]:     { prob: [.7,.4,.7,.4, .7,.4,.7,.4, .7,.4,.7,.4, .7,.4,.7,.4], vel: 52 },
+    [GM.TAMB]:     { prob: [0,0,.4,0, 0,0,.4,0, 0,0,.4,0, 0,0,.4,0], vel: 50, ghost: true },
+    [GM.BONGO_HI]: { prob: [0,0,0,.3, 0,0,0,0, 0,0,.3,0, 0,0,0,0], vel: 62, ghost: true },
+  },
 };
+
+// Rhythm-box styles loop like the hardware did: no fills, near-machine timing.
+const MACHINE_STYLE_KEYS = new Set([
+  'machineBossa', 'machineCha', 'machineRumba', 'machineSamba', 'machineMambo',
+  'machineBeguine', 'machineSwing', 'machineMarch', 'machineSlowRock',
+  'machineRock', 'machineDisco', 'machinePop',
+]);
 
 // Fill material for the last bar of each 4-bar phrase: snare/tom runs over the
 // final beat(s). Each entry = [stepInBar, gmPitch, velocity].
@@ -1963,10 +2055,15 @@ function generateDrums({ drumStyle, bars = 4, sliders = {}, seed = null }) {
   // fills instead of snare/tom runs, and no crash on the next downbeat.
   const isPercLayer = !(GM.KICK in style);
   const fillPool = isPercLayer ? PERC_FILLS : DRUM_FILLS;
+  // Rhythm-box presets loop like the hardware: no fills, near-machine timing,
+  // and they don't improvise extra syncopation hits.
+  const isMachine = MACHINE_STYLE_KEYS.has(drumStyle);
+  const jitterAmt = isMachine ? 3 : 12;
+  const syncInject = isMachine ? syncopation * 0.02 : syncopation * 0.06;
 
   for (let b = 0; b < bars; b++) {
     // Is this a fill bar? Last bar of each 4-bar group (and the final bar).
-    const isFillBar = (b % 4 === 3) || (b === bars - 1 && bars > 1);
+    const isFillBar = !isMachine && ((b % 4 === 3) || (b === bars - 1 && bars > 1));
     const doFill = isFillBar && rng() < 0.25 + variation * 0.65;
     // Fill occupies the tail steps — suppress other instruments there.
     const fill = doFill ? fillPool[Math.floor(rng() * fillPool.length)] : null;
@@ -1979,7 +2076,7 @@ function generateDrums({ drumStyle, bars = 4, sliders = {}, seed = null }) {
         let p = inst.prob[s];
         if (p <= 0) {
           // Syncopation: chance of an extra ghost hit on off-16ths.
-          if (syncopation > 0 && (s % 2 === 1) && rng() < syncopation * 0.06) {
+          if (syncopation > 0 && (s % 2 === 1) && rng() < syncInject) {
             p = 1;
           } else continue;
         } else if (p < 0.95) {
@@ -1991,7 +2088,7 @@ function generateDrums({ drumStyle, bars = 4, sliders = {}, seed = null }) {
         const accent = s % 4 === 0 ? 8 : 0;
         const ghost = inst.ghost && rng() < 0.5;
         const vel = Math.max(30, Math.min(125, Math.round(
-          (ghost ? inst.vel * 0.55 : inst.vel) + accent + (rng() - 0.5) * 12
+          (ghost ? inst.vel * 0.55 : inst.vel) + accent + (rng() - 0.5) * jitterAmt
         )));
         notes.push({
           pitch,
@@ -2498,6 +2595,23 @@ const ROLES = [
   { id: 'arp',    label: 'Arp' },
   { id: 'drums',  label: 'Drums' },
   { id: 'perc',   label: 'Perc' },
+  { id: 'machine', label: 'Rhythm box' },
+];
+
+// Classic preset rhythms for the Rhythm box role (Ace Tone / CR-78 / organ era).
+const MACHINE_OPTIONS = [
+  { value: 'machineBossa',    label: 'Bossa Nova' },
+  { value: 'machineCha',      label: 'Cha-Cha' },
+  { value: 'machineRumba',    label: 'Rumba' },
+  { value: 'machineSamba',    label: 'Samba' },
+  { value: 'machineMambo',    label: 'Mambo' },
+  { value: 'machineBeguine',  label: 'Beguine' },
+  { value: 'machineSwing',    label: 'Swing' },
+  { value: 'machineMarch',    label: 'March' },
+  { value: 'machineSlowRock', label: 'Slow Rock' },
+  { value: 'machineRock',     label: "Rock '78" },
+  { value: 'machineDisco',    label: "Disco '78" },
+  { value: 'machinePop',      label: "Pop '78" },
 ];
 
 const GENRES = [
@@ -2521,6 +2635,7 @@ const ROLE_BASE = {
   arp:    { density: 0.70, variation: 0.20, syncopation: 0.10, length: 0.30, register: 0.55, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
   drums:  { density: 0.50, variation: 0.35, syncopation: 0.25, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
   perc:   { density: 0.55, variation: 0.30, syncopation: 0.35, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
+  machine:{ density: 0.50, variation: 0.15, syncopation: 0.20, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
 };
 
 // Groove defaults per genre — merged between ROLE_BASE and recipe overrides.
@@ -2620,6 +2735,18 @@ const RECIPES = {
     synth:   { engine: 'drums', drumStyle: 'percSynth', tip: 'Electronic blips: woodblocks, cowbell and clave, 808-style syncopation.' },
     lofi:    { engine: 'drums', drumStyle: 'percLofi', tip: 'Soft shaker ghosts, snaps and a muted conga. Tape-saturate and tuck under the beat.' },
     minimal: { engine: 'drums', drumStyle: 'percMinimal', sliders: { variation: 0.15 }, tip: 'Sparse woodblock ticks and a lone shaker — microhouse pointillism. 122–132 BPM.' },
+  },
+  machine: {
+    french:  { engine: 'drums', drumStyle: 'machinePop', tip: "Pop '78 — the CR-78 loop Blondie and Phil Collins built on. Sample-ready as-is. Pick other presets in the dropdown." },
+    disco:   { engine: 'drums', drumStyle: 'machineDisco', tip: "Disco '78 — stiff organ-disco preset. The charm IS the stiffness; resist humanizing." },
+    rock:    { engine: 'drums', drumStyle: 'machineRock', tip: "Rock '78 — the organ 'Rock 1' button. Stiff eighths, no fills, loops forever." },
+    reggae:  { engine: 'drums', drumStyle: 'machineSlowRock', tip: 'Slow Rock — the 6/8-ballad button. Set Swing to Triplet for the authentic 12/8 sway. 60–80 BPM.' },
+    latin:   { engine: 'drums', drumStyle: 'machineBossa', tip: 'Bossa Nova — THE organ preset: rim clave + soft kick. Try Cha-Cha, Rumba, Samba and Mambo in the dropdown. 110–130 BPM.' },
+    baroque: { engine: 'drums', drumStyle: 'machineMarch', tip: 'March — kick on the beat, snare answers, woodblock ticks. The oompah button.' },
+    jazz:    { engine: 'drums', drumStyle: 'machineSwing', tip: 'Swing — ride pattern + feathered kick. The genre default Swing (Triplet-ish) makes the ride skip correctly.' },
+    synth:   { engine: 'drums', drumStyle: 'machinePop', sliders: { density: 0.6 }, tip: "Pop '78 at synth tempo — CR-78 electro-pop. 110–130 BPM." },
+    lofi:    { engine: 'drums', drumStyle: 'machineBeguine', tip: 'Beguine — dusty ballroom-organ charm, triangle and all. Lovely under tape-saturated keys. 70–90 BPM.' },
+    minimal: { engine: 'drums', drumStyle: 'machineRumba', sliders: { density: 0.35 }, tip: 'Rumba — clave-led and sparse. Strip Density for pure clave + kick.' },
   },
 };
 
@@ -2748,6 +2875,24 @@ function bindChips() {
       .join('');
     extSel.addEventListener('change', e => { STATE.extensions = e.target.value; regenerate(); });
   }
+
+  const machineSel = document.getElementById('machine-select');
+  if (machineSel) {
+    machineSel.innerHTML = MACHINE_OPTIONS
+      .map(o => `<option value="${o.value}">${o.label}</option>`)
+      .join('');
+    machineSel.addEventListener('change', e => { STATE.drumStyle = e.target.value; regenerate(); });
+  }
+}
+
+// Show / sync the preset-rhythm dropdown (Rhythm box role only).
+function refreshMachineUI() {
+  const wrapper = document.getElementById('machine-wrap');
+  const select = document.getElementById('machine-select');
+  if (!wrapper || !select) return;
+  const showIt = STATE.role === 'machine';
+  wrapper.style.display = showIt ? '' : 'none';
+  if (showIt) select.value = STATE.drumStyle;
 }
 
 // Resolve (role, genre) → recipe, apply it, and optionally audition directly.
@@ -2780,6 +2925,7 @@ function applyCombo(roleId, genreId, { audition = false } = {}) {
   if (tipEl) tipEl.textContent = recipe.tip ?? '';
 
   refreshExtensionsUI();
+  refreshMachineUI();
   refreshPanelVisibility();
   refreshSliderUI();
 

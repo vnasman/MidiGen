@@ -638,10 +638,15 @@ function generateDrums({ drumStyle, bars = 4, sliders = {}, seed = null }) {
   // fills instead of snare/tom runs, and no crash on the next downbeat.
   const isPercLayer = !(GM.KICK in style);
   const fillPool = isPercLayer ? PERC_FILLS : DRUM_FILLS;
+  // Rhythm-box presets loop like the hardware: no fills, near-machine timing,
+  // and they don't improvise extra syncopation hits.
+  const isMachine = MACHINE_STYLE_KEYS.has(drumStyle);
+  const jitterAmt = isMachine ? 3 : 12;
+  const syncInject = isMachine ? syncopation * 0.02 : syncopation * 0.06;
 
   for (let b = 0; b < bars; b++) {
     // Is this a fill bar? Last bar of each 4-bar group (and the final bar).
-    const isFillBar = (b % 4 === 3) || (b === bars - 1 && bars > 1);
+    const isFillBar = !isMachine && ((b % 4 === 3) || (b === bars - 1 && bars > 1));
     const doFill = isFillBar && rng() < 0.25 + variation * 0.65;
     // Fill occupies the tail steps — suppress other instruments there.
     const fill = doFill ? fillPool[Math.floor(rng() * fillPool.length)] : null;
@@ -654,7 +659,7 @@ function generateDrums({ drumStyle, bars = 4, sliders = {}, seed = null }) {
         let p = inst.prob[s];
         if (p <= 0) {
           // Syncopation: chance of an extra ghost hit on off-16ths.
-          if (syncopation > 0 && (s % 2 === 1) && rng() < syncopation * 0.06) {
+          if (syncopation > 0 && (s % 2 === 1) && rng() < syncInject) {
             p = 1;
           } else continue;
         } else if (p < 0.95) {
@@ -666,7 +671,7 @@ function generateDrums({ drumStyle, bars = 4, sliders = {}, seed = null }) {
         const accent = s % 4 === 0 ? 8 : 0;
         const ghost = inst.ghost && rng() < 0.5;
         const vel = Math.max(30, Math.min(125, Math.round(
-          (ghost ? inst.vel * 0.55 : inst.vel) + accent + (rng() - 0.5) * 12
+          (ghost ? inst.vel * 0.55 : inst.vel) + accent + (rng() - 0.5) * jitterAmt
         )));
         notes.push({
           pitch,

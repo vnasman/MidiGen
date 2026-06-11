@@ -394,7 +394,93 @@ const DRUM_STYLES = {
     [GM.SHAKER]:      { prob: [0,0,0,0, .6,0,0,0, 0,0,0,0, .6,0,0,0], vel: 50, ghost: true },
     [GM.RIM]:         { prob: [0,0,0,0, 0,0,0,.25, 0,0,0,0, 0,.25,0,0], vel: 56, ghost: true },
   },
+
+  // ===== RHYTHM BOX (classic organ / drum machine presets) =====
+  // Transcribed from the preset-rhythm era: Ace Tone Rhythm Ace, Roland CR-78,
+  // home-organ accompaniment buttons. These LOOP — no fills, minimal jitter.
+  machineBossa: {
+    [GM.KICK]: { prob: [1,0,0,0, 0,0,.9,0, 1,0,0,0, 0,0,.9,0], vel: 98 },
+    [GM.RIM]:  { prob: [1,0,0,1, 0,0,1,0, 0,0,1,0, 0,1,0,0], vel: 78 },      // bossa clave
+    [GM.CHAT]: { prob: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], vel: 56 },
+    [GM.SHAKER]: { prob: [0,.3,0,.3, 0,.3,0,.3, 0,.3,0,.3, 0,.3,0,.3], vel: 44, ghost: true },
+  },
+  machineCha: {
+    [GM.KICK]:       { prob: [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0], vel: 96 },
+    [GM.RIM]:        { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], vel: 80 },
+    [GM.COWBELL]:    { prob: [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0], vel: 74 },
+    [GM.GUIRO_LONG]: { prob: [.8,0,0,0, 0,0,0,0, .8,0,0,0, 0,0,0,0], vel: 62 },
+    [GM.CONGA_OPEN]: { prob: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,1,1], vel: 84 }, // the "cha-cha"
+  },
+  machineRumba: {
+    [GM.CLAVE]:      { prob: [1,0,0,1, 0,0,1,0, 0,0,1,0, 1,0,0,0], vel: 84 }, // 3-2 son
+    [GM.KICK]:       { prob: [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0], vel: 92 },
+    [GM.CONGA_OPEN]: { prob: [0,0,.7,0, 0,0,.5,0, 0,0,.7,0, 0,0,.5,0], vel: 78 },
+    [GM.SHAKER]:     { prob: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], vel: 52, ghost: true },
+    [GM.RIM]:        { prob: [0,0,0,0, .8,0,0,0, 0,0,0,0, .8,0,0,0], vel: 62 },
+  },
+  machineSamba: {
+    [GM.KICK]:         { prob: [1,0,0,1, 0,0,1,0, 1,0,0,1, 0,0,1,0], vel: 96 }, // 3-3-2 surdo
+    [GM.SHAKER]:       { prob: [.85,.85,.85,.85, .85,.85,.85,.85, .85,.85,.85,.85, .85,.85,.85,.85], vel: 50, ghost: true },
+    [GM.WOODBLOCK_HI]: { prob: [0,0,.7,0, 0,.7,0,0, .7,0,0,.7, 0,0,.7,0], vel: 66 }, // agogô-ish
+    [GM.TAMB]:         { prob: [.5,0,0,0, .5,0,0,0, .5,0,0,0, .5,0,0,0], vel: 56, ghost: true },
+  },
+  machineMambo: {
+    [GM.COWBELL]:    { prob: [1,0,1,1, 0,1,0,1, 1,0,1,0, 1,1,0,1], vel: 72 }, // cáscara-style bell
+    [GM.KICK]:       { prob: [1,0,0,0, 0,0,.8,0, 1,0,0,0, 0,0,.8,0], vel: 94 },
+    [GM.CONGA_OPEN]: { prob: [0,0,0,0, .6,0,0,0, 0,0,0,0, .8,0,1,0], vel: 80 },
+    [GM.SHAKER]:     { prob: [0,.25,0,.25, 0,.25,0,.25, 0,.25,0,.25, 0,.25,0,.25], vel: 46, ghost: true },
+  },
+  machineBeguine: {
+    [GM.KICK]:     { prob: [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0], vel: 92 },
+    [GM.SNARE]:    { prob: [0,0,0,0, .8,0,0,0, 0,0,0,0, .8,0,0,0], vel: 56 },
+    [GM.RIM]:      { prob: [0,0,0,0, 0,0,1,0, 0,0,0,0, 0,0,1,0], vel: 72 },
+    [GM.SHAKER]:   { prob: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], vel: 50, ghost: true },
+    [GM.TRIANGLE]: { prob: [.4,0,0,0, 0,0,0,0, .4,0,0,0, 0,0,0,0], vel: 54 },
+  },
+  machineSwing: {
+    [GM.RIDE]:  { prob: [1,0,0,0, 1,0,1,0, 1,0,0,0, 1,0,1,0], vel: 74 },     // swing slider → triplet ride
+    [GM.CHAT]:  { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], vel: 54 },     // hat foot on 2 & 4
+    [GM.KICK]:  { prob: [1,0,0,0, 0,0,0,0, .6,0,0,0, 0,0,0,0], vel: 52 },    // feathered
+    [GM.SNARE]: { prob: [0,0,0,.2, 0,0,.2,0, 0,.2,0,0, 0,0,.25,0], vel: 40, ghost: true },
+  },
+  machineMarch: {
+    [GM.KICK]:         { prob: [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0], vel: 104 },
+    [GM.SNARE]:        { prob: [0,0,0,0, 1,0,.5,.5, 0,0,0,0, 1,0,.5,.5], vel: 84 },
+    [GM.WOODBLOCK_LO]: { prob: [.4,0,.4,0, .4,0,.4,0, .4,0,.4,0, .4,0,.4,0], vel: 54, ghost: true },
+    [GM.CRASH]:        { prob: [.25,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0], vel: 88 },
+  },
+  machineSlowRock: {
+    [GM.KICK]:  { prob: [1,0,0,0, 0,0,0,0, 1,0,.5,0, 0,0,0,0], vel: 96 },
+    [GM.SNARE]: { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], vel: 86 },
+    [GM.CHAT]:  { prob: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], vel: 60 },
+  },
+  machineRock: {
+    [GM.KICK]:  { prob: [1,0,0,0, 0,0,0,0, 1,0,.8,0, 0,0,0,0], vel: 102 },
+    [GM.SNARE]: { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], vel: 94 },
+    [GM.CHAT]:  { prob: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], vel: 64 },
+    [GM.OHAT]:  { prob: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,.3,0], vel: 74 },
+  },
+  machineDisco: {
+    [GM.KICK]:  { prob: [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0], vel: 102 },
+    [GM.SNARE]: { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], vel: 84 },
+    [GM.CHAT]:  { prob: [.8,.5,.8,.5, .8,.5,.8,.5, .8,.5,.8,.5, .8,.5,.8,.5], vel: 56 },
+    [GM.OHAT]:  { prob: [0,0,.9,0, 0,0,.9,0, 0,0,.9,0, 0,0,.9,0], vel: 76 },
+  },
+  machinePop: {
+    [GM.KICK]:     { prob: [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,1,0], vel: 96 },   // CR-78 pop
+    [GM.RIM]:      { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], vel: 70 },
+    [GM.CHAT]:     { prob: [.7,.4,.7,.4, .7,.4,.7,.4, .7,.4,.7,.4, .7,.4,.7,.4], vel: 52 },
+    [GM.TAMB]:     { prob: [0,0,.4,0, 0,0,.4,0, 0,0,.4,0, 0,0,.4,0], vel: 50, ghost: true },
+    [GM.BONGO_HI]: { prob: [0,0,0,.3, 0,0,0,0, 0,0,.3,0, 0,0,0,0], vel: 62, ghost: true },
+  },
 };
+
+// Rhythm-box styles loop like the hardware did: no fills, near-machine timing.
+const MACHINE_STYLE_KEYS = new Set([
+  'machineBossa', 'machineCha', 'machineRumba', 'machineSamba', 'machineMambo',
+  'machineBeguine', 'machineSwing', 'machineMarch', 'machineSlowRock',
+  'machineRock', 'machineDisco', 'machinePop',
+]);
 
 // Fill material for the last bar of each 4-bar phrase: snare/tom runs over the
 // final beat(s). Each entry = [stepInBar, gmPitch, velocity].

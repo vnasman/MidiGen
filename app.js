@@ -28,6 +28,23 @@ const ROLES = [
   { id: 'arp',    label: 'Arp' },
   { id: 'drums',  label: 'Drums' },
   { id: 'perc',   label: 'Perc' },
+  { id: 'machine', label: 'Rhythm box' },
+];
+
+// Classic preset rhythms for the Rhythm box role (Ace Tone / CR-78 / organ era).
+const MACHINE_OPTIONS = [
+  { value: 'machineBossa',    label: 'Bossa Nova' },
+  { value: 'machineCha',      label: 'Cha-Cha' },
+  { value: 'machineRumba',    label: 'Rumba' },
+  { value: 'machineSamba',    label: 'Samba' },
+  { value: 'machineMambo',    label: 'Mambo' },
+  { value: 'machineBeguine',  label: 'Beguine' },
+  { value: 'machineSwing',    label: 'Swing' },
+  { value: 'machineMarch',    label: 'March' },
+  { value: 'machineSlowRock', label: 'Slow Rock' },
+  { value: 'machineRock',     label: "Rock '78" },
+  { value: 'machineDisco',    label: "Disco '78" },
+  { value: 'machinePop',      label: "Pop '78" },
 ];
 
 const GENRES = [
@@ -51,6 +68,7 @@ const ROLE_BASE = {
   arp:    { density: 0.70, variation: 0.20, syncopation: 0.10, length: 0.30, register: 0.55, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
   drums:  { density: 0.50, variation: 0.35, syncopation: 0.25, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
   perc:   { density: 0.55, variation: 0.30, syncopation: 0.35, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
+  machine:{ density: 0.50, variation: 0.15, syncopation: 0.20, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
 };
 
 // Groove defaults per genre — merged between ROLE_BASE and recipe overrides.
@@ -150,6 +168,18 @@ const RECIPES = {
     synth:   { engine: 'drums', drumStyle: 'percSynth', tip: 'Electronic blips: woodblocks, cowbell and clave, 808-style syncopation.' },
     lofi:    { engine: 'drums', drumStyle: 'percLofi', tip: 'Soft shaker ghosts, snaps and a muted conga. Tape-saturate and tuck under the beat.' },
     minimal: { engine: 'drums', drumStyle: 'percMinimal', sliders: { variation: 0.15 }, tip: 'Sparse woodblock ticks and a lone shaker — microhouse pointillism. 122–132 BPM.' },
+  },
+  machine: {
+    french:  { engine: 'drums', drumStyle: 'machinePop', tip: "Pop '78 — the CR-78 loop Blondie and Phil Collins built on. Sample-ready as-is. Pick other presets in the dropdown." },
+    disco:   { engine: 'drums', drumStyle: 'machineDisco', tip: "Disco '78 — stiff organ-disco preset. The charm IS the stiffness; resist humanizing." },
+    rock:    { engine: 'drums', drumStyle: 'machineRock', tip: "Rock '78 — the organ 'Rock 1' button. Stiff eighths, no fills, loops forever." },
+    reggae:  { engine: 'drums', drumStyle: 'machineSlowRock', tip: 'Slow Rock — the 6/8-ballad button. Set Swing to Triplet for the authentic 12/8 sway. 60–80 BPM.' },
+    latin:   { engine: 'drums', drumStyle: 'machineBossa', tip: 'Bossa Nova — THE organ preset: rim clave + soft kick. Try Cha-Cha, Rumba, Samba and Mambo in the dropdown. 110–130 BPM.' },
+    baroque: { engine: 'drums', drumStyle: 'machineMarch', tip: 'March — kick on the beat, snare answers, woodblock ticks. The oompah button.' },
+    jazz:    { engine: 'drums', drumStyle: 'machineSwing', tip: 'Swing — ride pattern + feathered kick. The genre default Swing (Triplet-ish) makes the ride skip correctly.' },
+    synth:   { engine: 'drums', drumStyle: 'machinePop', sliders: { density: 0.6 }, tip: "Pop '78 at synth tempo — CR-78 electro-pop. 110–130 BPM." },
+    lofi:    { engine: 'drums', drumStyle: 'machineBeguine', tip: 'Beguine — dusty ballroom-organ charm, triangle and all. Lovely under tape-saturated keys. 70–90 BPM.' },
+    minimal: { engine: 'drums', drumStyle: 'machineRumba', sliders: { density: 0.35 }, tip: 'Rumba — clave-led and sparse. Strip Density for pure clave + kick.' },
   },
 };
 
@@ -278,6 +308,24 @@ function bindChips() {
       .join('');
     extSel.addEventListener('change', e => { STATE.extensions = e.target.value; regenerate(); });
   }
+
+  const machineSel = document.getElementById('machine-select');
+  if (machineSel) {
+    machineSel.innerHTML = MACHINE_OPTIONS
+      .map(o => `<option value="${o.value}">${o.label}</option>`)
+      .join('');
+    machineSel.addEventListener('change', e => { STATE.drumStyle = e.target.value; regenerate(); });
+  }
+}
+
+// Show / sync the preset-rhythm dropdown (Rhythm box role only).
+function refreshMachineUI() {
+  const wrapper = document.getElementById('machine-wrap');
+  const select = document.getElementById('machine-select');
+  if (!wrapper || !select) return;
+  const showIt = STATE.role === 'machine';
+  wrapper.style.display = showIt ? '' : 'none';
+  if (showIt) select.value = STATE.drumStyle;
 }
 
 // Resolve (role, genre) → recipe, apply it, and optionally audition directly.
@@ -310,6 +358,7 @@ function applyCombo(roleId, genreId, { audition = false } = {}) {
   if (tipEl) tipEl.textContent = recipe.tip ?? '';
 
   refreshExtensionsUI();
+  refreshMachineUI();
   refreshPanelVisibility();
   refreshSliderUI();
 
