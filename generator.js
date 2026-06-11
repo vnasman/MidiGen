@@ -634,13 +634,17 @@ function generateDrums({ drumStyle, bars = 4, sliders = {}, seed = null }) {
 
   const ticksPerBar = STEPS_PER_BAR * TICKS_PER_STEP;
   const notes = [];
+  // A style without a kick is a percussion layer: it gets timbale/conga/shaker
+  // fills instead of snare/tom runs, and no crash on the next downbeat.
+  const isPercLayer = !(GM.KICK in style);
+  const fillPool = isPercLayer ? PERC_FILLS : DRUM_FILLS;
 
   for (let b = 0; b < bars; b++) {
     // Is this a fill bar? Last bar of each 4-bar group (and the final bar).
     const isFillBar = (b % 4 === 3) || (b === bars - 1 && bars > 1);
     const doFill = isFillBar && rng() < 0.25 + variation * 0.65;
     // Fill occupies the tail steps — suppress other instruments there.
-    const fill = doFill ? DRUM_FILLS[Math.floor(rng() * DRUM_FILLS.length)] : null;
+    const fill = doFill ? fillPool[Math.floor(rng() * fillPool.length)] : null;
     const fillStart = fill ? fill[0][0] : 16;
 
     for (const [pitchStr, inst] of Object.entries(style)) {
@@ -684,8 +688,9 @@ function generateDrums({ drumStyle, bars = 4, sliders = {}, seed = null }) {
           channel: 9,
         });
       }
-      // Crash on the downbeat after a fill (if not the last bar).
-      if (b + 1 < bars && rng() < 0.6) {
+      // Crash on the downbeat after a fill — kit styles only; a crash inside
+      // a percussion layer would fight the actual drum kit underneath.
+      if (!isPercLayer && b + 1 < bars && rng() < 0.6) {
         notes.push({
           pitch: GM.CRASH,
           startTicks: (b + 1) * ticksPerBar,

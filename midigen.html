@@ -1159,6 +1159,10 @@ const GM = {
   TOM_LO: 45, TOM_MID: 47, TOM_HI: 50,
   TAMB: 54, COWBELL: 56, SHAKER: 70, CLAVE: 75,
   CONGA_OPEN: 63, CONGA_SLAP: 62,
+  BONGO_HI: 60, BONGO_LO: 61,
+  TIMBALE_HI: 65, TIMBALE_LO: 66,
+  CABASA: 69, GUIRO_LONG: 73, GUIRO_SHORT: 74,
+  WOODBLOCK_HI: 76, WOODBLOCK_LO: 77, TRIANGLE: 81,
 };
 
 const DRUM_LABELS = {
@@ -1167,6 +1171,10 @@ const DRUM_LABELS = {
   45: 'Low tom', 47: 'Mid tom', 50: 'High tom',
   54: 'Tambourine', 56: 'Cowbell', 70: 'Shaker', 75: 'Clave',
   63: 'Open conga', 62: 'Slap conga',
+  60: 'Hi bongo', 61: 'Lo bongo',
+  65: 'Hi timbale', 66: 'Lo timbale',
+  69: 'Cabasa', 73: 'Guiro long', 74: 'Guiro short',
+  76: 'Woodblock hi', 77: 'Woodblock lo', 81: 'Triangle',
 };
 
 // Each style: { [gmPitch]: { prob: number[16], vel: number, ghost?: boolean } }
@@ -1229,6 +1237,69 @@ const DRUM_STYLES = {
     [GM.CHAT]:   { prob: [.8,0,.5,0, .8,0,.5,0, .8,0,.5,0, .8,0,.5,0], vel: 55 },
     [GM.RIM]:    { prob: [0,0,.15,0, 0,0,0,.15, 0,.15,0,0, 0,0,.15,0], vel: 48, ghost: true },
   },
+
+  // ===== PERCUSSION LAYERS (no kick/snare — meant to stack on a drum kit) =====
+  // Cumbia: guacharaca long–short–short, maracas, llamador on the offbeats,
+  // open quinto hits, campana pulse, tambora accents on the low tom.
+  cumbia: {
+    [GM.GUIRO_LONG]:  { prob: [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0], vel: 82 },
+    [GM.GUIRO_SHORT]: { prob: [0,0,.85,.85, 0,0,.85,.85, 0,0,.85,.85, 0,0,.85,.85], vel: 66 },
+    [GM.SHAKER]:      { prob: [.9,0,.6,0, .9,0,.6,0, .9,0,.6,0, .9,0,.6,0], vel: 58, ghost: true },
+    [GM.CONGA_SLAP]:  { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], vel: 86 },     // llamador
+    [GM.CONGA_OPEN]:  { prob: [0,0,.3,0, 0,0,.5,0, 0,0,.4,0, 0,0,.75,0], vel: 90 }, // quinto
+    [GM.COWBELL]:     { prob: [.35,0,0,0, .35,0,0,0, .35,0,0,0, .35,0,0,0], vel: 72 },
+    [GM.TOM_LO]:      { prob: [0,0,0,0, .3,0,0,0, 0,0,0,0, .45,0,0,0], vel: 92 },   // tambora
+  },
+  percHouse: {
+    [GM.SHAKER]:      { prob: [.85,.4,.85,.4, .85,.4,.85,.4, .85,.4,.85,.4, .85,.4,.85,.4], vel: 58, ghost: true },
+    [GM.CONGA_OPEN]:  { prob: [0,0,.6,0, 0,0,.5,0, 0,0,.6,0, 0,0,.7,0], vel: 84 },
+    [GM.CONGA_SLAP]:  { prob: [0,0,0,.3, 0,0,0,0, 0,0,0,.3, 0,0,0,0], vel: 76, ghost: true },
+    [GM.TAMB]:        { prob: [0,0,0,0, .6,0,0,0, 0,0,0,0, .6,0,0,0], vel: 64 },
+    [GM.COWBELL]:     { prob: [0,0,.15,0, 0,0,.15,0, 0,0,.15,0, 0,0,.15,0], vel: 60, ghost: true },
+  },
+  percDisco: {
+    [GM.TAMB]:        { prob: [.8,.45,.8,.45, .8,.45,.8,.45, .8,.45,.8,.45, .8,.45,.8,.45], vel: 62, ghost: true },
+    [GM.CABASA]:      { prob: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], vel: 56 },
+    [GM.CONGA_OPEN]:  { prob: [0,0,.5,0, 0,0,.4,0, 0,0,.55,0, 0,0,.65,0], vel: 82 },
+    [GM.BONGO_HI]:    { prob: [0,.2,0,.2, 0,.2,0,0, 0,.2,0,.2, 0,0,.25,0], vel: 70, ghost: true },
+  },
+  percRock: {
+    [GM.TAMB]:        { prob: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], vel: 68 },
+    [GM.COWBELL]:     { prob: [.3,0,0,0, .3,0,0,0, .3,0,0,0, .3,0,0,0], vel: 74 },
+    [GM.SHAKER]:      { prob: [0,.25,0,.25, 0,.25,0,.25, 0,.25,0,.25, 0,.25,0,.25], vel: 50, ghost: true },
+  },
+  percReggae: {
+    [GM.BONGO_HI]:    { prob: [0,0,.7,0, 0,.3,0,0, 0,0,.7,0, 0,.3,.4,0], vel: 76 },
+    [GM.BONGO_LO]:    { prob: [0,0,0,0, .6,0,0,0, 0,0,0,0, .6,0,0,0], vel: 80 },
+    [GM.GUIRO_LONG]:  { prob: [0,0,.6,0, 0,0,.6,0, 0,0,.6,0, 0,0,.6,0], vel: 64 },
+    [GM.SHAKER]:      { prob: [.5,0,.5,0, .5,0,.5,0, .5,0,.5,0, .5,0,.5,0], vel: 52, ghost: true },
+    [GM.WOODBLOCK_HI]:{ prob: [0,0,0,0, 0,0,0,.2, 0,0,0,0, 0,.2,0,0], vel: 62, ghost: true },
+  },
+  percBaroque: {
+    [GM.TAMB]:        { prob: [1,0,0,0, .7,0,0,0, 1,0,0,0, .7,0,.3,0], vel: 70 },
+    [GM.TRIANGLE]:    { prob: [.5,0,0,0, 0,0,0,0, .5,0,0,0, 0,0,0,0], vel: 60 },
+  },
+  percJazz: {
+    [GM.SHAKER]:      { prob: [.8,0,.5,.3, .8,0,.5,.3, .8,0,.5,.3, .8,0,.5,.3], vel: 54, ghost: true },
+    [GM.RIM]:         { prob: [0,0,0,0, .5,0,0,.2, 0,.2,0,0, .5,0,0,0], vel: 58, ghost: true },
+    [GM.CABASA]:      { prob: [0,0,.35,0, 0,0,.35,0, 0,0,.35,0, 0,0,.35,0], vel: 50, ghost: true },
+  },
+  percSynth: {
+    [GM.WOODBLOCK_HI]:{ prob: [0,0,.6,0, 0,.4,0,0, 0,0,.6,0, 0,0,0,.4], vel: 72 },
+    [GM.WOODBLOCK_LO]:{ prob: [0,0,0,0, 0,0,.5,0, 0,.3,0,0, 0,0,.5,0], vel: 68 },
+    [GM.COWBELL]:     { prob: [0,0,0,.4, 0,0,0,0, 0,0,0,.4, 0,0,0,0], vel: 70, ghost: true },
+    [GM.CLAVE]:       { prob: [0,.3,0,0, 0,0,0,.35, 0,.3,0,0, 0,0,.35,0], vel: 76, ghost: true },
+  },
+  percLofi: {
+    [GM.SHAKER]:      { prob: [.7,0,.4,.2, .7,0,.4,0, .7,0,.4,.2, .7,0,.4,0], vel: 48, ghost: true },
+    [GM.RIM]:         { prob: [0,0,0,0, .4,0,0,0, 0,0,.2,0, .4,0,0,0], vel: 52, ghost: true },
+    [GM.CONGA_SLAP]:  { prob: [0,0,0,0, 0,0,.25,0, 0,0,0,0, 0,0,.25,0], vel: 60, ghost: true },
+  },
+  percMinimal: {
+    [GM.WOODBLOCK_HI]:{ prob: [0,0,.5,0, 0,0,0,0, 0,0,.5,0, 0,0,0,0], vel: 64 },
+    [GM.SHAKER]:      { prob: [0,0,0,0, .6,0,0,0, 0,0,0,0, .6,0,0,0], vel: 50, ghost: true },
+    [GM.RIM]:         { prob: [0,0,0,0, 0,0,0,.25, 0,0,0,0, 0,.25,0,0], vel: 56, ghost: true },
+  },
 };
 
 // Fill material for the last bar of each 4-bar phrase: snare/tom runs over the
@@ -1238,6 +1309,15 @@ const DRUM_FILLS = [
   [[12, GM.TOM_HI, 92], [13, GM.TOM_MID, 92], [14, GM.TOM_LO, 96], [15, GM.SNARE, 100]],
   [[13, GM.SNARE, 75], [14, GM.SNARE, 88], [15, GM.SNARE, 102]],
   [[10, GM.SNARE, 70], [11, GM.SNARE, 78], [12, GM.TOM_HI, 88], [13, GM.TOM_MID, 92], [14, GM.TOM_LO, 96], [15, GM.CRASH, 100]],
+];
+
+// Fills for percussion layers — timbale rolls, conga flurries, bongo runs,
+// shaker crescendos. Used when a style has no kick (= it's a perc layer).
+const PERC_FILLS = [
+  [[12, GM.TIMBALE_HI, 95], [13, GM.TIMBALE_HI, 85], [14, GM.TIMBALE_LO, 95], [15, GM.TIMBALE_LO, 102]],
+  [[12, GM.CONGA_OPEN, 90], [13, GM.CONGA_SLAP, 80], [14, GM.CONGA_OPEN, 95], [15, GM.CONGA_OPEN, 100]],
+  [[13, GM.BONGO_HI, 85], [14, GM.BONGO_LO, 90], [15, GM.BONGO_HI, 95]],
+  [[10, GM.SHAKER, 55], [11, GM.SHAKER, 64], [12, GM.SHAKER, 72], [13, GM.SHAKER, 80], [14, GM.SHAKER, 88], [15, GM.SHAKER, 96]],
 ];
 
 
@@ -1879,13 +1959,17 @@ function generateDrums({ drumStyle, bars = 4, sliders = {}, seed = null }) {
 
   const ticksPerBar = STEPS_PER_BAR * TICKS_PER_STEP;
   const notes = [];
+  // A style without a kick is a percussion layer: it gets timbale/conga/shaker
+  // fills instead of snare/tom runs, and no crash on the next downbeat.
+  const isPercLayer = !(GM.KICK in style);
+  const fillPool = isPercLayer ? PERC_FILLS : DRUM_FILLS;
 
   for (let b = 0; b < bars; b++) {
     // Is this a fill bar? Last bar of each 4-bar group (and the final bar).
     const isFillBar = (b % 4 === 3) || (b === bars - 1 && bars > 1);
     const doFill = isFillBar && rng() < 0.25 + variation * 0.65;
     // Fill occupies the tail steps — suppress other instruments there.
-    const fill = doFill ? DRUM_FILLS[Math.floor(rng() * DRUM_FILLS.length)] : null;
+    const fill = doFill ? fillPool[Math.floor(rng() * fillPool.length)] : null;
     const fillStart = fill ? fill[0][0] : 16;
 
     for (const [pitchStr, inst] of Object.entries(style)) {
@@ -1929,8 +2013,9 @@ function generateDrums({ drumStyle, bars = 4, sliders = {}, seed = null }) {
           channel: 9,
         });
       }
-      // Crash on the downbeat after a fill (if not the last bar).
-      if (b + 1 < bars && rng() < 0.6) {
+      // Crash on the downbeat after a fill — kit styles only; a crash inside
+      // a percussion layer would fight the actual drum kit underneath.
+      if (!isPercLayer && b + 1 < bars && rng() < 0.6) {
         notes.push({
           pitch: GM.CRASH,
           startTicks: (b + 1) * ticksPerBar,
@@ -2412,6 +2497,7 @@ const ROLES = [
   { id: 'chord',  label: 'Chords' },
   { id: 'arp',    label: 'Arp' },
   { id: 'drums',  label: 'Drums' },
+  { id: 'perc',   label: 'Perc' },
 ];
 
 const GENRES = [
@@ -2434,6 +2520,7 @@ const ROLE_BASE = {
   chord:  { density: 0.45, variation: 0.30, syncopation: 0.50, length: 0.30, register: 0.55, range: 0.35, chromatic: 0.00, swing: 0, pocket: 0 },
   arp:    { density: 0.70, variation: 0.20, syncopation: 0.10, length: 0.30, register: 0.55, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
   drums:  { density: 0.50, variation: 0.35, syncopation: 0.25, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
+  perc:   { density: 0.55, variation: 0.30, syncopation: 0.35, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
 };
 
 // Groove defaults per genre — merged between ROLE_BASE and recipe overrides.
@@ -2521,6 +2608,18 @@ const RECIPES = {
     synth:   { engine: 'drums', drumStyle: 'techno', sliders: { density: 0.55, syncopation: 0.30 }, tip: 'Machine 16th hi-hats, hard kick. 125–140 BPM.' },
     lofi:    { engine: 'drums', drumStyle: 'lofi', tip: 'Lazy boom bap: sloppy kick, relaxed snare. Add swing + vinyl crackle. 70–90 BPM.' },
     minimal: { engine: 'drums', drumStyle: 'techno', sliders: { density: 0.35, variation: 0.15 }, tip: 'Stripped-down techno — few elements, lots of repetition. 122–132 BPM.' },
+  },
+  perc: {
+    french:  { engine: 'drums', drumStyle: 'percHouse', tip: 'Shaker 16ths + off-beat congas — the glue for a house groove. Layer over the French house drums.' },
+    disco:   { engine: 'drums', drumStyle: 'percDisco', tip: 'Tambourine 16ths, cabasa and congas — the Studio 54 topping. Layer over the Disco drums.' },
+    rock:    { engine: 'drums', drumStyle: 'percRock', tip: 'Tambourine 8ths and a touch of cowbell. Need more cowbell? Raise Density.' },
+    reggae:  { engine: 'drums', drumStyle: 'percReggae', tip: 'Bongos + off-beat guiro scrapes. Sits beautifully over a one drop. 70–90 BPM.' },
+    latin:   { engine: 'drums', drumStyle: 'cumbia', tip: 'Cumbia: guacharaca long–short–short, maracas, llamador on the offbeats, open quinto hits, tambora accents. 85–105 BPM. Layer over Latin drums or run it solo.' },
+    baroque: { engine: 'drums', drumStyle: 'percBaroque', sliders: { density: 0.40 }, tip: 'Tambourine + triangle — folk-dance percussion, period-appropriate for once.' },
+    jazz:    { engine: 'drums', drumStyle: 'percJazz', tip: 'Shaker with swing + rim clicks. Subtle — let the kit breathe.' },
+    synth:   { engine: 'drums', drumStyle: 'percSynth', tip: 'Electronic blips: woodblocks, cowbell and clave, 808-style syncopation.' },
+    lofi:    { engine: 'drums', drumStyle: 'percLofi', tip: 'Soft shaker ghosts, snaps and a muted conga. Tape-saturate and tuck under the beat.' },
+    minimal: { engine: 'drums', drumStyle: 'percMinimal', sliders: { variation: 0.15 }, tip: 'Sparse woodblock ticks and a lone shaker — microhouse pointillism. 122–132 BPM.' },
   },
 };
 
@@ -2702,7 +2801,9 @@ function comboLabel() {
 const DRUM_HIDDEN_SLIDERS = ['length', 'register', 'range', 'chromatic'];
 
 function refreshPanelVisibility() {
-  const isDrums = STATE.role === 'drums';
+  // Engine-based: both the Drums and Perc roles run the drums engine and
+  // share the same reduced control set.
+  const isDrums = STATE.engine === 'drums';
 
   const progPanel = document.getElementById('panel-progression');
   if (progPanel) progPanel.style.display = isDrums ? 'none' : '';
@@ -3055,7 +3156,7 @@ function renderDrumRoll(container) {
   if (main.notes.length === 0) { container.innerHTML = ''; return; }
 
   // Collect used instruments, order: cymbals/perc on top, kick at bottom.
-  const LANE_ORDER = [49, 51, 46, 42, 54, 70, 56, 75, 63, 62, 50, 47, 45, 37, 39, 38, 36];
+  const LANE_ORDER = [49, 51, 81, 46, 42, 54, 69, 70, 73, 74, 56, 75, 76, 77, 60, 61, 65, 66, 63, 62, 50, 47, 45, 37, 39, 38, 36];
   const used = [...new Set(main.notes.map(n => n.pitch))];
   used.sort((a, b) => LANE_ORDER.indexOf(a) - LANE_ORDER.indexOf(b));
 
@@ -3186,6 +3287,16 @@ function triggerDrum(gmPitch, time, vel, dur) {
     case 75: k.perc.triggerAttackRelease('E5', 0.07, time, vel); break;
     case 63: k.perc.triggerAttackRelease('C4', 0.12, time, vel); break;
     case 62: k.perc.triggerAttackRelease('A3', 0.08, time, vel); break;
+    case 60: k.perc.triggerAttackRelease('D4', 0.09, time, vel); break;          // hi bongo
+    case 61: k.perc.triggerAttackRelease('A3', 0.10, time, vel); break;          // lo bongo
+    case 65: k.tom.triggerAttackRelease('E3', 0.18, time, vel); break;           // hi timbale
+    case 66: k.tom.triggerAttackRelease('B2', 0.20, time, vel); break;           // lo timbale
+    case 69: k.hat.triggerAttackRelease(0.05, time, vel * 0.8); break;           // cabasa
+    case 73: k.clap.triggerAttackRelease(0.14, time, vel * 0.8); break;          // guiro long
+    case 74: k.clap.triggerAttackRelease(0.05, time, vel * 0.7); break;          // guiro short
+    case 76: k.perc.triggerAttackRelease('G5', 0.05, time, vel); break;          // woodblock hi
+    case 77: k.perc.triggerAttackRelease('D5', 0.05, time, vel); break;          // woodblock lo
+    case 81: k.metal.triggerAttackRelease('C7', 0.5, time, vel * 0.35); break;   // triangle
     default: k.perc.triggerAttackRelease('C4', 0.1, time, vel);
   }
 }

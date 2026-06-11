@@ -253,6 +253,10 @@ const GM = {
   TOM_LO: 45, TOM_MID: 47, TOM_HI: 50,
   TAMB: 54, COWBELL: 56, SHAKER: 70, CLAVE: 75,
   CONGA_OPEN: 63, CONGA_SLAP: 62,
+  BONGO_HI: 60, BONGO_LO: 61,
+  TIMBALE_HI: 65, TIMBALE_LO: 66,
+  CABASA: 69, GUIRO_LONG: 73, GUIRO_SHORT: 74,
+  WOODBLOCK_HI: 76, WOODBLOCK_LO: 77, TRIANGLE: 81,
 };
 
 const DRUM_LABELS = {
@@ -261,6 +265,10 @@ const DRUM_LABELS = {
   45: 'Low tom', 47: 'Mid tom', 50: 'High tom',
   54: 'Tambourine', 56: 'Cowbell', 70: 'Shaker', 75: 'Clave',
   63: 'Open conga', 62: 'Slap conga',
+  60: 'Hi bongo', 61: 'Lo bongo',
+  65: 'Hi timbale', 66: 'Lo timbale',
+  69: 'Cabasa', 73: 'Guiro long', 74: 'Guiro short',
+  76: 'Woodblock hi', 77: 'Woodblock lo', 81: 'Triangle',
 };
 
 // Each style: { [gmPitch]: { prob: number[16], vel: number, ghost?: boolean } }
@@ -323,6 +331,69 @@ const DRUM_STYLES = {
     [GM.CHAT]:   { prob: [.8,0,.5,0, .8,0,.5,0, .8,0,.5,0, .8,0,.5,0], vel: 55 },
     [GM.RIM]:    { prob: [0,0,.15,0, 0,0,0,.15, 0,.15,0,0, 0,0,.15,0], vel: 48, ghost: true },
   },
+
+  // ===== PERCUSSION LAYERS (no kick/snare — meant to stack on a drum kit) =====
+  // Cumbia: guacharaca long–short–short, maracas, llamador on the offbeats,
+  // open quinto hits, campana pulse, tambora accents on the low tom.
+  cumbia: {
+    [GM.GUIRO_LONG]:  { prob: [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0], vel: 82 },
+    [GM.GUIRO_SHORT]: { prob: [0,0,.85,.85, 0,0,.85,.85, 0,0,.85,.85, 0,0,.85,.85], vel: 66 },
+    [GM.SHAKER]:      { prob: [.9,0,.6,0, .9,0,.6,0, .9,0,.6,0, .9,0,.6,0], vel: 58, ghost: true },
+    [GM.CONGA_SLAP]:  { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], vel: 86 },     // llamador
+    [GM.CONGA_OPEN]:  { prob: [0,0,.3,0, 0,0,.5,0, 0,0,.4,0, 0,0,.75,0], vel: 90 }, // quinto
+    [GM.COWBELL]:     { prob: [.35,0,0,0, .35,0,0,0, .35,0,0,0, .35,0,0,0], vel: 72 },
+    [GM.TOM_LO]:      { prob: [0,0,0,0, .3,0,0,0, 0,0,0,0, .45,0,0,0], vel: 92 },   // tambora
+  },
+  percHouse: {
+    [GM.SHAKER]:      { prob: [.85,.4,.85,.4, .85,.4,.85,.4, .85,.4,.85,.4, .85,.4,.85,.4], vel: 58, ghost: true },
+    [GM.CONGA_OPEN]:  { prob: [0,0,.6,0, 0,0,.5,0, 0,0,.6,0, 0,0,.7,0], vel: 84 },
+    [GM.CONGA_SLAP]:  { prob: [0,0,0,.3, 0,0,0,0, 0,0,0,.3, 0,0,0,0], vel: 76, ghost: true },
+    [GM.TAMB]:        { prob: [0,0,0,0, .6,0,0,0, 0,0,0,0, .6,0,0,0], vel: 64 },
+    [GM.COWBELL]:     { prob: [0,0,.15,0, 0,0,.15,0, 0,0,.15,0, 0,0,.15,0], vel: 60, ghost: true },
+  },
+  percDisco: {
+    [GM.TAMB]:        { prob: [.8,.45,.8,.45, .8,.45,.8,.45, .8,.45,.8,.45, .8,.45,.8,.45], vel: 62, ghost: true },
+    [GM.CABASA]:      { prob: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], vel: 56 },
+    [GM.CONGA_OPEN]:  { prob: [0,0,.5,0, 0,0,.4,0, 0,0,.55,0, 0,0,.65,0], vel: 82 },
+    [GM.BONGO_HI]:    { prob: [0,.2,0,.2, 0,.2,0,0, 0,.2,0,.2, 0,0,.25,0], vel: 70, ghost: true },
+  },
+  percRock: {
+    [GM.TAMB]:        { prob: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], vel: 68 },
+    [GM.COWBELL]:     { prob: [.3,0,0,0, .3,0,0,0, .3,0,0,0, .3,0,0,0], vel: 74 },
+    [GM.SHAKER]:      { prob: [0,.25,0,.25, 0,.25,0,.25, 0,.25,0,.25, 0,.25,0,.25], vel: 50, ghost: true },
+  },
+  percReggae: {
+    [GM.BONGO_HI]:    { prob: [0,0,.7,0, 0,.3,0,0, 0,0,.7,0, 0,.3,.4,0], vel: 76 },
+    [GM.BONGO_LO]:    { prob: [0,0,0,0, .6,0,0,0, 0,0,0,0, .6,0,0,0], vel: 80 },
+    [GM.GUIRO_LONG]:  { prob: [0,0,.6,0, 0,0,.6,0, 0,0,.6,0, 0,0,.6,0], vel: 64 },
+    [GM.SHAKER]:      { prob: [.5,0,.5,0, .5,0,.5,0, .5,0,.5,0, .5,0,.5,0], vel: 52, ghost: true },
+    [GM.WOODBLOCK_HI]:{ prob: [0,0,0,0, 0,0,0,.2, 0,0,0,0, 0,.2,0,0], vel: 62, ghost: true },
+  },
+  percBaroque: {
+    [GM.TAMB]:        { prob: [1,0,0,0, .7,0,0,0, 1,0,0,0, .7,0,.3,0], vel: 70 },
+    [GM.TRIANGLE]:    { prob: [.5,0,0,0, 0,0,0,0, .5,0,0,0, 0,0,0,0], vel: 60 },
+  },
+  percJazz: {
+    [GM.SHAKER]:      { prob: [.8,0,.5,.3, .8,0,.5,.3, .8,0,.5,.3, .8,0,.5,.3], vel: 54, ghost: true },
+    [GM.RIM]:         { prob: [0,0,0,0, .5,0,0,.2, 0,.2,0,0, .5,0,0,0], vel: 58, ghost: true },
+    [GM.CABASA]:      { prob: [0,0,.35,0, 0,0,.35,0, 0,0,.35,0, 0,0,.35,0], vel: 50, ghost: true },
+  },
+  percSynth: {
+    [GM.WOODBLOCK_HI]:{ prob: [0,0,.6,0, 0,.4,0,0, 0,0,.6,0, 0,0,0,.4], vel: 72 },
+    [GM.WOODBLOCK_LO]:{ prob: [0,0,0,0, 0,0,.5,0, 0,.3,0,0, 0,0,.5,0], vel: 68 },
+    [GM.COWBELL]:     { prob: [0,0,0,.4, 0,0,0,0, 0,0,0,.4, 0,0,0,0], vel: 70, ghost: true },
+    [GM.CLAVE]:       { prob: [0,.3,0,0, 0,0,0,.35, 0,.3,0,0, 0,0,.35,0], vel: 76, ghost: true },
+  },
+  percLofi: {
+    [GM.SHAKER]:      { prob: [.7,0,.4,.2, .7,0,.4,0, .7,0,.4,.2, .7,0,.4,0], vel: 48, ghost: true },
+    [GM.RIM]:         { prob: [0,0,0,0, .4,0,0,0, 0,0,.2,0, .4,0,0,0], vel: 52, ghost: true },
+    [GM.CONGA_SLAP]:  { prob: [0,0,0,0, 0,0,.25,0, 0,0,0,0, 0,0,.25,0], vel: 60, ghost: true },
+  },
+  percMinimal: {
+    [GM.WOODBLOCK_HI]:{ prob: [0,0,.5,0, 0,0,0,0, 0,0,.5,0, 0,0,0,0], vel: 64 },
+    [GM.SHAKER]:      { prob: [0,0,0,0, .6,0,0,0, 0,0,0,0, .6,0,0,0], vel: 50, ghost: true },
+    [GM.RIM]:         { prob: [0,0,0,0, 0,0,0,.25, 0,0,0,0, 0,.25,0,0], vel: 56, ghost: true },
+  },
 };
 
 // Fill material for the last bar of each 4-bar phrase: snare/tom runs over the
@@ -332,4 +403,13 @@ const DRUM_FILLS = [
   [[12, GM.TOM_HI, 92], [13, GM.TOM_MID, 92], [14, GM.TOM_LO, 96], [15, GM.SNARE, 100]],
   [[13, GM.SNARE, 75], [14, GM.SNARE, 88], [15, GM.SNARE, 102]],
   [[10, GM.SNARE, 70], [11, GM.SNARE, 78], [12, GM.TOM_HI, 88], [13, GM.TOM_MID, 92], [14, GM.TOM_LO, 96], [15, GM.CRASH, 100]],
+];
+
+// Fills for percussion layers — timbale rolls, conga flurries, bongo runs,
+// shaker crescendos. Used when a style has no kick (= it's a perc layer).
+const PERC_FILLS = [
+  [[12, GM.TIMBALE_HI, 95], [13, GM.TIMBALE_HI, 85], [14, GM.TIMBALE_LO, 95], [15, GM.TIMBALE_LO, 102]],
+  [[12, GM.CONGA_OPEN, 90], [13, GM.CONGA_SLAP, 80], [14, GM.CONGA_OPEN, 95], [15, GM.CONGA_OPEN, 100]],
+  [[13, GM.BONGO_HI, 85], [14, GM.BONGO_LO, 90], [15, GM.BONGO_HI, 95]],
+  [[10, GM.SHAKER, 55], [11, GM.SHAKER, 64], [12, GM.SHAKER, 72], [13, GM.SHAKER, 80], [14, GM.SHAKER, 88], [15, GM.SHAKER, 96]],
 ];

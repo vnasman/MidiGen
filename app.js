@@ -27,6 +27,7 @@ const ROLES = [
   { id: 'chord',  label: 'Chords' },
   { id: 'arp',    label: 'Arp' },
   { id: 'drums',  label: 'Drums' },
+  { id: 'perc',   label: 'Perc' },
 ];
 
 const GENRES = [
@@ -49,6 +50,7 @@ const ROLE_BASE = {
   chord:  { density: 0.45, variation: 0.30, syncopation: 0.50, length: 0.30, register: 0.55, range: 0.35, chromatic: 0.00, swing: 0, pocket: 0 },
   arp:    { density: 0.70, variation: 0.20, syncopation: 0.10, length: 0.30, register: 0.55, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
   drums:  { density: 0.50, variation: 0.35, syncopation: 0.25, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
+  perc:   { density: 0.55, variation: 0.30, syncopation: 0.35, length: 0.50, register: 0.50, range: 0.50, chromatic: 0.00, swing: 0, pocket: 0 },
 };
 
 // Groove defaults per genre — merged between ROLE_BASE and recipe overrides.
@@ -136,6 +138,18 @@ const RECIPES = {
     synth:   { engine: 'drums', drumStyle: 'techno', sliders: { density: 0.55, syncopation: 0.30 }, tip: 'Machine 16th hi-hats, hard kick. 125–140 BPM.' },
     lofi:    { engine: 'drums', drumStyle: 'lofi', tip: 'Lazy boom bap: sloppy kick, relaxed snare. Add swing + vinyl crackle. 70–90 BPM.' },
     minimal: { engine: 'drums', drumStyle: 'techno', sliders: { density: 0.35, variation: 0.15 }, tip: 'Stripped-down techno — few elements, lots of repetition. 122–132 BPM.' },
+  },
+  perc: {
+    french:  { engine: 'drums', drumStyle: 'percHouse', tip: 'Shaker 16ths + off-beat congas — the glue for a house groove. Layer over the French house drums.' },
+    disco:   { engine: 'drums', drumStyle: 'percDisco', tip: 'Tambourine 16ths, cabasa and congas — the Studio 54 topping. Layer over the Disco drums.' },
+    rock:    { engine: 'drums', drumStyle: 'percRock', tip: 'Tambourine 8ths and a touch of cowbell. Need more cowbell? Raise Density.' },
+    reggae:  { engine: 'drums', drumStyle: 'percReggae', tip: 'Bongos + off-beat guiro scrapes. Sits beautifully over a one drop. 70–90 BPM.' },
+    latin:   { engine: 'drums', drumStyle: 'cumbia', tip: 'Cumbia: guacharaca long–short–short, maracas, llamador on the offbeats, open quinto hits, tambora accents. 85–105 BPM. Layer over Latin drums or run it solo.' },
+    baroque: { engine: 'drums', drumStyle: 'percBaroque', sliders: { density: 0.40 }, tip: 'Tambourine + triangle — folk-dance percussion, period-appropriate for once.' },
+    jazz:    { engine: 'drums', drumStyle: 'percJazz', tip: 'Shaker with swing + rim clicks. Subtle — let the kit breathe.' },
+    synth:   { engine: 'drums', drumStyle: 'percSynth', tip: 'Electronic blips: woodblocks, cowbell and clave, 808-style syncopation.' },
+    lofi:    { engine: 'drums', drumStyle: 'percLofi', tip: 'Soft shaker ghosts, snaps and a muted conga. Tape-saturate and tuck under the beat.' },
+    minimal: { engine: 'drums', drumStyle: 'percMinimal', sliders: { variation: 0.15 }, tip: 'Sparse woodblock ticks and a lone shaker — microhouse pointillism. 122–132 BPM.' },
   },
 };
 
@@ -317,7 +331,9 @@ function comboLabel() {
 const DRUM_HIDDEN_SLIDERS = ['length', 'register', 'range', 'chromatic'];
 
 function refreshPanelVisibility() {
-  const isDrums = STATE.role === 'drums';
+  // Engine-based: both the Drums and Perc roles run the drums engine and
+  // share the same reduced control set.
+  const isDrums = STATE.engine === 'drums';
 
   const progPanel = document.getElementById('panel-progression');
   if (progPanel) progPanel.style.display = isDrums ? 'none' : '';
@@ -670,7 +686,7 @@ function renderDrumRoll(container) {
   if (main.notes.length === 0) { container.innerHTML = ''; return; }
 
   // Collect used instruments, order: cymbals/perc on top, kick at bottom.
-  const LANE_ORDER = [49, 51, 46, 42, 54, 70, 56, 75, 63, 62, 50, 47, 45, 37, 39, 38, 36];
+  const LANE_ORDER = [49, 51, 81, 46, 42, 54, 69, 70, 73, 74, 56, 75, 76, 77, 60, 61, 65, 66, 63, 62, 50, 47, 45, 37, 39, 38, 36];
   const used = [...new Set(main.notes.map(n => n.pitch))];
   used.sort((a, b) => LANE_ORDER.indexOf(a) - LANE_ORDER.indexOf(b));
 
@@ -801,6 +817,16 @@ function triggerDrum(gmPitch, time, vel, dur) {
     case 75: k.perc.triggerAttackRelease('E5', 0.07, time, vel); break;
     case 63: k.perc.triggerAttackRelease('C4', 0.12, time, vel); break;
     case 62: k.perc.triggerAttackRelease('A3', 0.08, time, vel); break;
+    case 60: k.perc.triggerAttackRelease('D4', 0.09, time, vel); break;          // hi bongo
+    case 61: k.perc.triggerAttackRelease('A3', 0.10, time, vel); break;          // lo bongo
+    case 65: k.tom.triggerAttackRelease('E3', 0.18, time, vel); break;           // hi timbale
+    case 66: k.tom.triggerAttackRelease('B2', 0.20, time, vel); break;           // lo timbale
+    case 69: k.hat.triggerAttackRelease(0.05, time, vel * 0.8); break;           // cabasa
+    case 73: k.clap.triggerAttackRelease(0.14, time, vel * 0.8); break;          // guiro long
+    case 74: k.clap.triggerAttackRelease(0.05, time, vel * 0.7); break;          // guiro short
+    case 76: k.perc.triggerAttackRelease('G5', 0.05, time, vel); break;          // woodblock hi
+    case 77: k.perc.triggerAttackRelease('D5', 0.05, time, vel); break;          // woodblock lo
+    case 81: k.metal.triggerAttackRelease('C7', 0.5, time, vel * 0.35); break;   // triangle
     default: k.perc.triggerAttackRelease('C4', 0.1, time, vel);
   }
 }
