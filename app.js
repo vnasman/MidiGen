@@ -473,7 +473,8 @@ function readUI() {
   const tonicPc = pitchClassFromName(rootName);
   // Anchor tonic around MIDI 48 (C3-ish) so register slider has room.
   const tonicMidi = 48 + tonicPc;
-  const scaleIntervals = SCALES[scaleName] || SCALES.minor;
+  // Pad pentatonic/blues scales to 7 degrees — engines think in 7-degree space.
+  const scaleIntervals = toHeptatonic(SCALES[scaleName] || SCALES.minor);
   const chordProgression = parseProgression(progressionText, tonicMidi, scaleIntervals);
 
   return { rootName, scaleName, bars, bpm, tonicMidi, scaleIntervals, chordProgression };
@@ -503,6 +504,7 @@ function generate(opts = {}) {
     });
     applyGroove(result.notes, STATE.sliders.swing ?? 0, STATE.sliders.pocket ?? 0,
                 result.ticksPerBar / 16, true, mulberry32(seed ^ 0xBEA7));
+    trimSamePitchOverlaps(result.notes);
     STATE.currentResult = { main: result, voices: [], bars: ui.bars, bpm: ui.bpm, isDrums: true };
     document.getElementById('seed-display').textContent =
       `seed: ${seed.toString(16).padStart(8, '0')}   ·   ${ui.bars} bars @ ${ui.bpm} bpm   ·   ${comboLabel()}`;
@@ -549,6 +551,7 @@ function generate(opts = {}) {
   // Groove applies before voices are built, so harmony voices inherit the feel.
   applyGroove(result.notes, STATE.sliders.swing ?? 0, STATE.sliders.pocket ?? 0,
               result.ticksPerBar / 16, false, mulberry32(seed ^ 0xBEA7));
+  trimSamePitchOverlaps(result.notes);
 
   // Build harmonized voices with optional canonic delay. Done in a single pass:
   // pre-filter source notes by whether they'd still fall inside the phrase, then
@@ -589,6 +592,7 @@ function generate(opts = {}) {
         chromaticOffset: n.chromaticOffset,
       };
     }
+    trimSamePitchOverlaps(out);
     return out;
   });
 
@@ -867,6 +871,9 @@ async function play() {
 
     const events = [];
     for (const n of main.notes) {
+      // Insurance: a non-finite pitch becomes a NaN Hz voice that Tone.js can
+      // never release (NaN !== NaN in its voice map) — a permanently stuck tone.
+      if (!Number.isFinite(n.pitch)) continue;
       events.push(isDrums
         ? {
             time: n.startTicks * secPerTick,
@@ -885,6 +892,7 @@ async function play() {
     }
     for (const tr of voices) {
       for (const n of tr) {
+        if (!Number.isFinite(n.pitch)) continue;
         events.push({
           time: n.startTicks * secPerTick,
           pitch: midiToHz(n.pitch),

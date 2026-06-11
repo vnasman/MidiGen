@@ -693,6 +693,27 @@ function midiToName(midi) {
   return `${name}${octave}`;
 }
 
+// Pad a non-heptatonic scale (pentatonic, blues) to 7 degrees by mapping each
+// diatonic function onto the nearest scale tone. The generators think in
+// 7-degree space (scaleStep + 7·octave); without this, degree 6 of a 6-note
+// scale reads undefined and produces NaN pitches — invisible notes that get
+// scheduled as NaN Hz voices, which Tone.js can never release (stuck tones).
+function toHeptatonic(intervals) {
+  if (intervals.length >= 7) return intervals;
+  // Pick the template matching the scale's third, then snap each degree.
+  const template = intervals.includes(4)
+    ? [0, 2, 4, 5, 7, 9, 11]    // major-ish
+    : [0, 2, 3, 5, 7, 8, 10];   // minor-ish
+  return template.map(t => {
+    let best = intervals[0], bestDist = Infinity;
+    for (const iv of intervals) {
+      const d = Math.abs(iv - t);
+      if (d < bestDist) { bestDist = d; best = iv; }
+    }
+    return best;
+  });
+}
+
 // --- Chord progression parser ---
 // Supports roman numerals (i, V, ♭VII, VImaj7) and chord names (Am, F#m7, Cmaj7, G/B).
 // Returns an array of { root: midi, pitchClasses: [pc...], label: string } per chord.
@@ -1682,8 +1703,9 @@ function generateRiff({
       const nextStep = i + 1 < bar.length ? bar[i + 1].step : STEPS_PER_BAR;
       const stepsToNext = nextStep - n.step;
 
-      // Determine duration: max sustain via lengthFactor (0 = stab, 1 = full sustain to next onset)
-      const durationSteps = Math.max(1, Math.round(stepsToNext * (0.35 + lengthFactor * 0.7)));
+      // Determine duration: max sustain via lengthFactor (0 = stab, 1 = legato).
+      // Capped just under 100% of the gap so repeated notes never overlap.
+      const durationSteps = Math.max(1, Math.round(stepsToNext * (0.33 + lengthFactor * 0.65)));
 
       const pitch = scaleStepToMidi(n.scaleStep, tonicPc, scaleIntervals, adjustedBase) + (n.chromaticOffset || 0);
       const velocity = velocityForStep(n.step, style, rng);
@@ -2270,6 +2292,30 @@ function applyGroove(notes, swing, pocket, ticksPerStep, isDrums, rng) {
   }
 }
 
+// ----- SAME-PITCH OVERLAP TRIM -----
+// Two overlapping notes of the SAME pitch confuse synths and DAWs: the first
+// note-off cuts the second note short (MIDI has no per-note identity). Trim
+// the earlier note instead. Overlaps between DIFFERENT pitches are left alone —
+// that's legato phrasing (and 303 slides depend on it).
+function trimSamePitchOverlaps(notes) {
+  const byPitch = new Map();
+  for (const n of notes) {
+    const arr = byPitch.get(n.pitch);
+    if (arr) arr.push(n); else byPitch.set(n.pitch, [n]);
+  }
+  for (const arr of byPitch.values()) {
+    if (arr.length < 2) continue;
+    arr.sort((a, b) => a.startTicks - b.startTicks);
+    for (let i = 0; i < arr.length - 1; i++) {
+      const cur = arr[i];
+      const maxEnd = arr[i + 1].startTicks - 5;
+      if (cur.startTicks + cur.durationTicks > maxEnd) {
+        cur.durationTicks = Math.max(20, maxEnd - cur.startTicks);
+      }
+    }
+  }
+}
+
 // ----- 303 ACID SLIDES -----
 // Overlapping notes read as glide on TB-303-style synths; exaggerated accent
 // contrast is the other half of the acid sound.
@@ -2812,7 +2858,8 @@ function readUI() {
   const tonicPc = pitchClassFromName(rootName);
   // Anchor tonic around MIDI 48 (C3-ish) so register slider has room.
   const tonicMidi = 48 + tonicPc;
-  const scaleIntervals = SCALES[scaleName] || SCALES.minor;
+  // Pad pentatonic/blues scales to 7 degrees — engines think in 7-degree space.
+  const scaleIntervals = toHeptatonic(SCALES[scaleName] || SCALES.minor);
   const chordProgression = parseProgression(progressionText, tonicMidi, scaleIntervals);
 
   return { rootName, scaleName, bars, bpm, tonicMidi, scaleIntervals, chordProgression };
@@ -2842,6 +2889,7 @@ function generate(opts = {}) {
     });
     applyGroove(result.notes, STATE.sliders.swing ?? 0, STATE.sliders.pocket ?? 0,
                 result.ticksPerBar / 16, true, mulberry32(seed ^ 0xBEA7));
+    trimSamePitchOverlaps(result.notes);
     STATE.currentResult = { main: result, voices: [], bars: ui.bars, bpm: ui.bpm, isDrums: true };
     document.getElementById('seed-display').textContent =
       `seed: ${seed.toString(16).padStart(8, '0')}   ·   ${ui.bars} bars @ ${ui.bpm} bpm   ·   ${comboLabel()}`;
@@ -2888,6 +2936,7 @@ function generate(opts = {}) {
   // Groove applies before voices are built, so harmony voices inherit the feel.
   applyGroove(result.notes, STATE.sliders.swing ?? 0, STATE.sliders.pocket ?? 0,
               result.ticksPerBar / 16, false, mulberry32(seed ^ 0xBEA7));
+  trimSamePitchOverlaps(result.notes);
 
   // Build harmonized voices with optional canonic delay. Done in a single pass:
   // pre-filter source notes by whether they'd still fall inside the phrase, then
@@ -2928,6 +2977,7 @@ function generate(opts = {}) {
         chromaticOffset: n.chromaticOffset,
       };
     }
+    trimSamePitchOverlaps(out);
     return out;
   });
 
@@ -3206,6 +3256,9 @@ async function play() {
 
     const events = [];
     for (const n of main.notes) {
+      // Insurance: a non-finite pitch becomes a NaN Hz voice that Tone.js can
+      // never release (NaN !== NaN in its voice map) — a permanently stuck tone.
+      if (!Number.isFinite(n.pitch)) continue;
       events.push(isDrums
         ? {
             time: n.startTicks * secPerTick,
@@ -3224,6 +3277,7 @@ async function play() {
     }
     for (const tr of voices) {
       for (const n of tr) {
+        if (!Number.isFinite(n.pitch)) continue;
         events.push({
           time: n.startTicks * secPerTick,
           pitch: midiToHz(n.pitch),

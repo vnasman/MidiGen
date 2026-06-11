@@ -33,6 +33,27 @@ function midiToName(midi) {
   return `${name}${octave}`;
 }
 
+// Pad a non-heptatonic scale (pentatonic, blues) to 7 degrees by mapping each
+// diatonic function onto the nearest scale tone. The generators think in
+// 7-degree space (scaleStep + 7·octave); without this, degree 6 of a 6-note
+// scale reads undefined and produces NaN pitches — invisible notes that get
+// scheduled as NaN Hz voices, which Tone.js can never release (stuck tones).
+function toHeptatonic(intervals) {
+  if (intervals.length >= 7) return intervals;
+  // Pick the template matching the scale's third, then snap each degree.
+  const template = intervals.includes(4)
+    ? [0, 2, 4, 5, 7, 9, 11]    // major-ish
+    : [0, 2, 3, 5, 7, 8, 10];   // minor-ish
+  return template.map(t => {
+    let best = intervals[0], bestDist = Infinity;
+    for (const iv of intervals) {
+      const d = Math.abs(iv - t);
+      if (d < bestDist) { bestDist = d; best = iv; }
+    }
+    return best;
+  });
+}
+
 // --- Chord progression parser ---
 // Supports roman numerals (i, V, ♭VII, VImaj7) and chord names (Am, F#m7, Cmaj7, G/B).
 // Returns an array of { root: midi, pitchClasses: [pc...], label: string } per chord.

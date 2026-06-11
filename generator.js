@@ -458,8 +458,9 @@ function generateRiff({
       const nextStep = i + 1 < bar.length ? bar[i + 1].step : STEPS_PER_BAR;
       const stepsToNext = nextStep - n.step;
 
-      // Determine duration: max sustain via lengthFactor (0 = stab, 1 = full sustain to next onset)
-      const durationSteps = Math.max(1, Math.round(stepsToNext * (0.35 + lengthFactor * 0.7)));
+      // Determine duration: max sustain via lengthFactor (0 = stab, 1 = legato).
+      // Capped just under 100% of the gap so repeated notes never overlap.
+      const durationSteps = Math.max(1, Math.round(stepsToNext * (0.33 + lengthFactor * 0.65)));
 
       const pitch = scaleStepToMidi(n.scaleStep, tonicPc, scaleIntervals, adjustedBase) + (n.chromaticOffset || 0);
       const velocity = velocityForStep(n.step, style, rng);
@@ -1043,6 +1044,30 @@ function applyGroove(notes, swing, pocket, ticksPerStep, isDrums, rng) {
       delay += (rng() - 0.5) * pocket * 8;   // ±4 ticks of human jitter
     }
     if (delay !== 0) n.startTicks = Math.max(0, Math.round(n.startTicks + delay));
+  }
+}
+
+// ----- SAME-PITCH OVERLAP TRIM -----
+// Two overlapping notes of the SAME pitch confuse synths and DAWs: the first
+// note-off cuts the second note short (MIDI has no per-note identity). Trim
+// the earlier note instead. Overlaps between DIFFERENT pitches are left alone —
+// that's legato phrasing (and 303 slides depend on it).
+function trimSamePitchOverlaps(notes) {
+  const byPitch = new Map();
+  for (const n of notes) {
+    const arr = byPitch.get(n.pitch);
+    if (arr) arr.push(n); else byPitch.set(n.pitch, [n]);
+  }
+  for (const arr of byPitch.values()) {
+    if (arr.length < 2) continue;
+    arr.sort((a, b) => a.startTicks - b.startTicks);
+    for (let i = 0; i < arr.length - 1; i++) {
+      const cur = arr[i];
+      const maxEnd = arr[i + 1].startTicks - 5;
+      if (cur.startTicks + cur.durationTicks > maxEnd) {
+        cur.durationTicks = Math.max(20, maxEnd - cur.startTicks);
+      }
+    }
   }
 }
 
