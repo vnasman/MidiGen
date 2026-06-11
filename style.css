@@ -271,6 +271,20 @@ button.big {
   padding: 13px 38px 13px 14px;
 }
 
+/* Dropdown rows (Chord type / Preset rhythm) align with the chip rows:
+   same label column, content starts where the chips start. */
+.select-row {
+  align-items: center;
+}
+.select-row .chip-row-label {
+  padding-top: 0;
+}
+.select-row select {
+  max-width: 300px;
+  font-size: 14px;
+  padding: 9px 34px 9px 12px;
+}
+
 .preset-tip {
   background: var(--accent-soft);
   border-left: 3px solid var(--accent);

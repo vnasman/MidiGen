@@ -282,6 +282,20 @@ button.big {
   padding: 13px 38px 13px 14px;
 }
 
+/* Dropdown rows (Chord type / Preset rhythm) align with the chip rows:
+   same label column, content starts where the chips start. */
+.select-row {
+  align-items: center;
+}
+.select-row .chip-row-label {
+  padding-top: 0;
+}
+.select-row select {
+  max-width: 300px;
+  font-size: 14px;
+  padding: 9px 34px 9px 12px;
+}
+
 .preset-tip {
   background: var(--accent-soft);
   border-left: 3px solid var(--accent);
@@ -608,21 +622,17 @@ footer {
           <span class="chip-row-label">What</span>
           <div class="chips" id="role-chips"></div>
         </div>
-        <div class="chip-row">
+        <div class="chip-row" id="feel-row">
           <span class="chip-row-label">Feel</span>
           <div class="chips" id="genre-chips"></div>
         </div>
-        <div id="extensions-wrap" class="extensions-wrap" style="display:none">
-          <label class="preset-label">
-            Chord type
-            <select id="extensions-select"></select>
-          </label>
+        <div id="extensions-wrap" class="chip-row select-row" style="display:none">
+          <span class="chip-row-label">Chord</span>
+          <select id="extensions-select" aria-label="Chord type"></select>
         </div>
-        <div id="machine-wrap" class="extensions-wrap" style="display:none">
-          <label class="preset-label">
-            Preset rhythm
-            <select id="machine-select"></select>
-          </label>
+        <div id="machine-wrap" class="chip-row select-row" style="display:none">
+          <span class="chip-row-label">Preset</span>
+          <select id="machine-select" aria-label="Preset rhythm"></select>
         </div>
         <div id="preset-tip" class="preset-tip"></div>
       </div>
@@ -2599,19 +2609,21 @@ const ROLES = [
 ];
 
 // Classic preset rhythms for the Rhythm box role (Ace Tone / CR-78 / organ era).
+// Each carries its own tip — shown when the preset is picked in the dropdown,
+// so the tip box always describes what's actually selected.
 const MACHINE_OPTIONS = [
-  { value: 'machineBossa',    label: 'Bossa Nova' },
-  { value: 'machineCha',      label: 'Cha-Cha' },
-  { value: 'machineRumba',    label: 'Rumba' },
-  { value: 'machineSamba',    label: 'Samba' },
-  { value: 'machineMambo',    label: 'Mambo' },
-  { value: 'machineBeguine',  label: 'Beguine' },
-  { value: 'machineSwing',    label: 'Swing' },
-  { value: 'machineMarch',    label: 'March' },
-  { value: 'machineSlowRock', label: 'Slow Rock' },
-  { value: 'machineRock',     label: "Rock '78" },
-  { value: 'machineDisco',    label: "Disco '78" },
-  { value: 'machinePop',      label: "Pop '78" },
+  { value: 'machineBossa',    label: 'Bossa Nova', tip: 'Bossa Nova — rim clave + soft kick, THE organ preset. 110–130 BPM.' },
+  { value: 'machineCha',      label: 'Cha-Cha',    tip: 'Cha-Cha — cowbell pulse, guiro, and the namesake double conga on the 4-and. 100–125 BPM.' },
+  { value: 'machineRumba',    label: 'Rumba',      tip: 'Rumba — 3-2 son clave, sparse and elegant. 95–115 BPM.' },
+  { value: 'machineSamba',    label: 'Samba',      tip: 'Samba — 3-3-2 surdo kick, agogô and shaker 16ths. 95–110 BPM.' },
+  { value: 'machineMambo',    label: 'Mambo',      tip: 'Mambo — the cáscara bell drives everything. 90–110 BPM.' },
+  { value: 'machineBeguine',  label: 'Beguine',    tip: 'Beguine — dusty ballroom sway, triangle and all. 70–95 BPM.' },
+  { value: 'machineSwing',    label: 'Swing',      tip: 'Swing — ride pattern + feathered kick. Set Swing to Triplet for the skip. 90–160 BPM.' },
+  { value: 'machineMarch',    label: 'March',      tip: 'March — kick on the beat, snare answers. The oompah button. 100–125 BPM.' },
+  { value: 'machineSlowRock', label: 'Slow Rock',  tip: 'Slow Rock — the 6/8-ballad button. Swing on Triplet gives the full 12/8 sway. 60–80 BPM.' },
+  { value: 'machineRock',     label: "Rock '78",   tip: "Rock '78 — stiff organ rock, loops forever, no fills. 100–140 BPM." },
+  { value: 'machineDisco',    label: "Disco '78",  tip: "Disco '78 — four-on-the-floor with open-hat offbeats, organ style. 110–125 BPM." },
+  { value: 'machinePop',      label: "Pop '78",    tip: "Pop '78 — the CR-78 classic Blondie and Phil Collins built on. 100–130 BPM." },
 ];
 
 const GENRES = [
@@ -2736,18 +2748,8 @@ const RECIPES = {
     lofi:    { engine: 'drums', drumStyle: 'percLofi', tip: 'Soft shaker ghosts, snaps and a muted conga. Tape-saturate and tuck under the beat.' },
     minimal: { engine: 'drums', drumStyle: 'percMinimal', sliders: { variation: 0.15 }, tip: 'Sparse woodblock ticks and a lone shaker — microhouse pointillism. 122–132 BPM.' },
   },
-  machine: {
-    french:  { engine: 'drums', drumStyle: 'machinePop', tip: "Pop '78 — the CR-78 loop Blondie and Phil Collins built on. Sample-ready as-is. Pick other presets in the dropdown." },
-    disco:   { engine: 'drums', drumStyle: 'machineDisco', tip: "Disco '78 — stiff organ-disco preset. The charm IS the stiffness; resist humanizing." },
-    rock:    { engine: 'drums', drumStyle: 'machineRock', tip: "Rock '78 — the organ 'Rock 1' button. Stiff eighths, no fills, loops forever." },
-    reggae:  { engine: 'drums', drumStyle: 'machineSlowRock', tip: 'Slow Rock — the 6/8-ballad button. Set Swing to Triplet for the authentic 12/8 sway. 60–80 BPM.' },
-    latin:   { engine: 'drums', drumStyle: 'machineBossa', tip: 'Bossa Nova — THE organ preset: rim clave + soft kick. Try Cha-Cha, Rumba, Samba and Mambo in the dropdown. 110–130 BPM.' },
-    baroque: { engine: 'drums', drumStyle: 'machineMarch', tip: 'March — kick on the beat, snare answers, woodblock ticks. The oompah button.' },
-    jazz:    { engine: 'drums', drumStyle: 'machineSwing', tip: 'Swing — ride pattern + feathered kick. The genre default Swing (Triplet-ish) makes the ride skip correctly.' },
-    synth:   { engine: 'drums', drumStyle: 'machinePop', sliders: { density: 0.6 }, tip: "Pop '78 at synth tempo — CR-78 electro-pop. 110–130 BPM." },
-    lofi:    { engine: 'drums', drumStyle: 'machineBeguine', tip: 'Beguine — dusty ballroom-organ charm, triangle and all. Lovely under tape-saturated keys. 70–90 BPM.' },
-    minimal: { engine: 'drums', drumStyle: 'machineRumba', sliders: { density: 0.35 }, tip: 'Rumba — clave-led and sparse. Strip Density for pure clave + kick.' },
-  },
+  // Note: the 'machine' (Rhythm box) role is resolved directly in applyCombo —
+  // its preset dropdown replaces the genre axis, so it has no recipe row here.
 };
 
 const VOICE_OPTIONS = [
@@ -2881,7 +2883,14 @@ function bindChips() {
     machineSel.innerHTML = MACHINE_OPTIONS
       .map(o => `<option value="${o.value}">${o.label}</option>`)
       .join('');
-    machineSel.addEventListener('change', e => { STATE.drumStyle = e.target.value; regenerate(); });
+    machineSel.addEventListener('change', e => {
+      STATE.drumStyle = e.target.value;
+      // Keep the tip in sync with the actual selection — not the genre default.
+      const opt = MACHINE_OPTIONS.find(o => o.value === e.target.value);
+      const tipEl = document.getElementById('preset-tip');
+      if (opt && tipEl) tipEl.textContent = opt.tip;
+      regenerate();
+    });
   }
 }
 
@@ -2896,7 +2905,29 @@ function refreshMachineUI() {
 }
 
 // Resolve (role, genre) → recipe, apply it, and optionally audition directly.
+// The Rhythm box role is special: its preset dropdown IS the feel selector, so
+// the genre axis is bypassed entirely (the Feel row is hidden meanwhile).
 function applyCombo(roleId, genreId, { audition = false } = {}) {
+  if (roleId === 'machine') {
+    STATE.role = 'machine';
+    STATE.engine = 'drums';
+    if (!MACHINE_STYLE_KEYS.has(STATE.drumStyle)) STATE.drumStyle = 'machineBossa';
+    for (const def of SLIDER_DEFS) STATE.sliders[def.id] = ROLE_BASE.machine[def.id];
+
+    document.querySelectorAll('#role-chips .chip').forEach(b =>
+      b.classList.toggle('active', b.dataset.role === 'machine'));
+    const opt = MACHINE_OPTIONS.find(o => o.value === STATE.drumStyle);
+    const tipEl = document.getElementById('preset-tip');
+    if (tipEl) tipEl.textContent = opt?.tip ?? '';
+
+    refreshExtensionsUI();
+    refreshMachineUI();
+    refreshPanelVisibility();
+    refreshSliderUI();
+    if (audition) generate();
+    return;
+  }
+
   const recipe = RECIPES[roleId]?.[genreId];
   if (!recipe) return;
 
@@ -2936,6 +2967,10 @@ function applyCombo(roleId, genreId, { audition = false } = {}) {
 
 function comboLabel() {
   const r = ROLES.find(x => x.id === STATE.role)?.label ?? STATE.role;
+  if (STATE.role === 'machine') {
+    const preset = MACHINE_OPTIONS.find(o => o.value === STATE.drumStyle)?.label ?? '';
+    return `${r} · ${preset}`;
+  }
   const g = GENRES.find(x => x.id === STATE.genre)?.label ?? STATE.genre;
   return `${g} · ${r}`;
 }
@@ -2950,6 +2985,11 @@ function refreshPanelVisibility() {
   // Engine-based: both the Drums and Perc roles run the drums engine and
   // share the same reduced control set.
   const isDrums = STATE.engine === 'drums';
+
+  // The Rhythm box replaces the genre axis with its preset dropdown — showing
+  // both would be two controls steering the same thing.
+  const feelRow = document.getElementById('feel-row');
+  if (feelRow) feelRow.style.display = STATE.role === 'machine' ? 'none' : '';
 
   const progPanel = document.getElementById('panel-progression');
   if (progPanel) progPanel.style.display = isDrums ? 'none' : '';
@@ -3082,6 +3122,10 @@ function randomize() {
   // Random combo, then nudge sliders (snapped to quarter steps for the UI).
   const role = ROLES[Math.floor(Math.random() * ROLES.length)].id;
   const genre = GENRES[Math.floor(Math.random() * GENRES.length)].id;
+  if (role === 'machine') {
+    // The rhythm box ignores genre — randomize the preset instead.
+    STATE.drumStyle = MACHINE_OPTIONS[Math.floor(Math.random() * MACHINE_OPTIONS.length)].value;
+  }
   applyCombo(role, genre, { audition: false });
   for (const def of SLIDER_DEFS) {
     const nudge = (Math.random() - 0.5) * 0.3;

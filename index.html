@@ -71,21 +71,17 @@
           <span class="chip-row-label">What</span>
           <div class="chips" id="role-chips"></div>
         </div>
-        <div class="chip-row">
+        <div class="chip-row" id="feel-row">
           <span class="chip-row-label">Feel</span>
           <div class="chips" id="genre-chips"></div>
         </div>
-        <div id="extensions-wrap" class="extensions-wrap" style="display:none">
-          <label class="preset-label">
-            Chord type
-            <select id="extensions-select"></select>
-          </label>
+        <div id="extensions-wrap" class="chip-row select-row" style="display:none">
+          <span class="chip-row-label">Chord</span>
+          <select id="extensions-select" aria-label="Chord type"></select>
         </div>
-        <div id="machine-wrap" class="extensions-wrap" style="display:none">
-          <label class="preset-label">
-            Preset rhythm
-            <select id="machine-select"></select>
-          </label>
+        <div id="machine-wrap" class="chip-row select-row" style="display:none">
+          <span class="chip-row-label">Preset</span>
+          <select id="machine-select" aria-label="Preset rhythm"></select>
         </div>
         <div id="preset-tip" class="preset-tip"></div>
       </div>
