@@ -47,6 +47,9 @@ function generateBarRhythm(style, density, syncopation, rng, role = 'lead') {
     let w = styleW * densityFit;
     if (c.pattern[0] === 0 && (c.pattern[1] || c.pattern[2] || c.pattern[3])) {
       w *= 1 + syncopation * 2;
+    } else if (c.pattern[0] === 1) {
+      // Push AND pull: high syncopation also drains weight from on-beat cells.
+      w *= 1 - syncopation * 0.45;
     }
     cellWeights[i] = w < 0.001 ? 0.001 : w;
   }
@@ -415,6 +418,14 @@ function generateRiff({
       bar = motifA.length ? motifA.map(n => ({ ...n })) : [{ step: 0, scaleStep: 0, chromaticOffset: 0 }];
     }
 
+    // Octave span: at high range, occasionally lift a whole bar an octave —
+    // a classic arrangement device (French house bass does this constantly).
+    // The chord anchoring below is octave-preserving, so harmony stays intact.
+    if (range > 0.45 && rng() < (range - 0.45) * 0.55) {
+      const lift = registerSlider > 0.6 ? -7 : 7;
+      for (const n of bar) n.scaleStep += lift;
+    }
+
     // Strong-beat anchoring: beat 1 = chord ROOT (always — anchors the harmony),
     // beat 3 = nearest chord tone. For bass-role this is non-negotiable; for
     // lead it pulls the melody onto chord changes so progressions sound clear.
@@ -485,7 +496,7 @@ function generateRiff({
   // chord-tones from the current bar's harmony.
   let finalNotes = notes;
   if (role === 'chord') {
-    finalNotes = expandToChordStabs(notes, chordPerBar, voicing, extensions, scaleIntervals, tonicPc, adjustedBase, ticksPerBar);
+    finalNotes = expandToChordStabs(notes, chordPerBar, voicing, extensions, scaleIntervals, tonicPc, adjustedBase, ticksPerBar, range);
   }
 
   return {
@@ -581,13 +592,17 @@ function chordVoicingPitches(chord, voicing, extensions, scaleIntervals, tonicPc
   return intervals.map(iv => rootMidi + iv);
 }
 
-function expandToChordStabs(notes, chordPerBar, voicing, extensions, scaleIntervals, tonicPc, basePitch, ticksPerBar) {
+function expandToChordStabs(notes, chordPerBar, voicing, extensions, scaleIntervals, tonicPc, basePitch, ticksPerBar, range = 0.5) {
   // The voicing is constant within a bar (chord doesn't change mid-bar in our
   // model), so precompute the clamped + deduplicated pitch list once per bar.
   // For a 16-bar chord-riff with ~150 onsets this avoids 140+ redundant builds,
   // plus the per-onset Set allocation that was used for duplicate guarding.
   const voicingByBar = chordPerBar.map(c => {
-    const raw = chordVoicingPitches(c ?? null, voicing, extensions, scaleIntervals, tonicPc, basePitch);
+    let raw = chordVoicingPitches(c ?? null, voicing, extensions, scaleIntervals, tonicPc, basePitch);
+    // Octave span governs voicing width for stabs: wide adds an octave-doubled
+    // root above the stack; narrow folds distant tones back inside one octave.
+    if (range > 0.55 && raw.length) raw = [...raw, raw[0] + 12];
+    else if (range < 0.25 && raw.length) raw = raw.map(p => p - raw[0] > 12 ? p - 12 : p);
     const seen = new Set();
     const out = [];
     for (const p of raw) {
@@ -663,8 +678,14 @@ function generateDrums({ drumStyle, bars = 4, sliders = {}, seed = null }) {
             p = 1;
           } else continue;
         } else if (p < 0.95) {
-          // Optional hit — density scales how often it fires.
-          p = p * (0.35 + density * 1.3);
+          // Loop tightness: low variation snaps optional hits toward
+          // deterministic (a locked loop); high variation keeps them
+          // probabilistic (a live player). Fills remain the other half.
+          const pBin = p >= 0.5 ? 1 : 0;
+          const k = 0.5 + variation * 0.5;
+          p = (pBin * (1 - k) + p * k) * (0.35 + density * 1.3);
+          // Machines lean into their off-beat color hits as syncopation rises.
+          if (isMachine && s % 4 !== 0) p *= 1 + syncopation * 0.8;
         }
         if (rng() >= p) continue;
 
@@ -780,7 +801,13 @@ function generateArp({ tonicMidi, scaleIntervals, bars = 4, pattern = 'up', chor
     switch (pattern) {
       case 'down':    seq = [...pool].reverse(); break;
       case 'updown':  seq = [...pool, ...pool.slice(1, -1).reverse()]; break;
-      case 'octave':  seq = [chordDegs[0], chordDegs[0] + 7]; break;
+      case 'octave':
+        // Root bounce; at a wide octave span it climbs across two octaves
+        // ("I Feel Love"-style) instead of one.
+        seq = octaves >= 2
+          ? [chordDegs[0], chordDegs[0] + 7, chordDegs[0] + 14, chordDegs[0] + 7]
+          : [chordDegs[0], chordDegs[0] + 7];
+        break;
       case 'alberti': seq = [pool[0], pool[2] ?? pool[0] + 7, pool[1] ?? pool[0], pool[2] ?? pool[0] + 7]; break;
       default:        seq = [...pool];
     }
@@ -940,15 +967,20 @@ function generateWalkingBass({ tonicMidi, scaleIntervals, bars = 4, chordProgres
         velocity: Math.round((q === 0 ? 100 : q === 2 ? 92 : 84) + (rng() - 0.5) * 8),
         scaleStep: midiToNearestScaleStep(pitch, tonicPc, scaleIntervals, basePitch),
       });
-      // The "and-of-4" skip note — a syncopation device first, density second.
-      // Diatonic neighbor so "Pure" chromatics stays pure.
-      if (q === 3 && rng() < Math.max(density * 0.35, syncopation * 0.55)) {
+      // Skip notes (8th-note embellishments): the classic "and-of-4" lead-in
+      // (keyed to density OR syncopation) plus, at higher density, skips on
+      // any beat. Placed on the straight 8th — the groove pass swings them
+      // toward the triplet, so the Swing control governs their placement.
+      const skipProb = q === 3
+        ? Math.max(density * 0.45, syncopation * 0.7)
+        : Math.max(density * 0.3, syncopation * 0.25);
+      if (rng() < skipProb) {
         const ss = midiToNearestScaleStep(pitch, tonicPc, scaleIntervals, basePitch) + (rng() < 0.5 ? 1 : -1);
         const skipPitch = clamp(scaleStepToMidi(ss, tonicPc, scaleIntervals, basePitch), 24, 60);
         notes.push({
           pitch: skipPitch,
-          startTicks: b * ticksPerBar + q * quarter + Math.round(quarter * 0.66),
-          durationTicks: Math.round(quarter * 0.3),
+          startTicks: b * ticksPerBar + q * quarter + Math.round(quarter * 0.5),
+          durationTicks: Math.round(quarter * 0.4),
           velocity: 70,
           scaleStep: midiToNearestScaleStep(skipPitch, tonicPc, scaleIntervals, basePitch),
         });
