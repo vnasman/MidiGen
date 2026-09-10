@@ -210,6 +210,19 @@ function chordTonesInScale(chord, scaleIntervals, tonicPc) {
   return degs.length ? degs : [0, 2, 4];
 }
 
+// Nearest scale degree + chromatic offset for an arbitrary pitch class — lets
+// a chromatic slash bass (Am/G# in A minor) be expressed on the scale-degree
+// grid the engines think in.
+function pcToDegreeOffset(pc, scaleIntervals, tonicPc) {
+  let best = 0, bestOff = 99;
+  for (let d = 0; d < scaleIntervals.length; d++) {
+    let off = pc - (tonicPc + scaleIntervals[d]) % 12;
+    if (off > 6) off -= 12; else if (off < -6) off += 12;
+    if (Math.abs(off) < Math.abs(bestOff)) { bestOff = off; best = d; }
+  }
+  return { deg: best, off: bestOff };
+}
+
 // Signed shortest distance from a to b on 7-step circle.
 function signedDelta(a, b) {
   let d = b - a;
@@ -445,12 +458,18 @@ function generateRiff({
     if (chord) {
       const chordDegs = chordTonesInScale(chord, scaleIntervals, tonicPc);
       const rootDeg = chordDegs[0];
+      // Bass-role: a slash chord's bass note (Am/G#) overrides the root anchor,
+      // so written bass lines — chromatic descents included — actually sound.
+      let anchorDeg = rootDeg, anchorOff = 0;
+      if (role === 'bass' && chord.bassPc != null) {
+        ({ deg: anchorDeg, off: anchorOff } = pcToDegreeOffset(chord.bassPc, scaleIntervals, tonicPc));
+      }
       for (const n of bar) {
         if (n.step === 0) {
-          // Always force beat 1 to chord root.
+          // Always force beat 1 to the anchor (chord root / slash bass).
           const octBase = Math.floor(n.scaleStep / 7) * 7;
-          n.scaleStep = octBase + rootDeg;
-          n.chromaticOffset = 0;
+          n.scaleStep = octBase + anchorDeg;
+          n.chromaticOffset = anchorOff;
         } else if (n.step === 8) {
           // Beat 3: nearest chord tone (third/fifth are great here).
           const currentMod = mod7(n.scaleStep);
@@ -602,7 +621,12 @@ function chordVoicingPitches(chord, voicing, extensions, scaleIntervals, tonicPc
 
   const baseOctave = Math.round((basePitch - rootPc) / 12);
   const rootMidi = rootPc + 12 * baseOctave;
-  return intervals.map(iv => rootMidi + iv);
+  const pitches = intervals.map(iv => rootMidi + iv);
+  // Slash chords: tuck the written bass note in just below the voicing.
+  if (chord && chord.bassPc != null && chord.bassPc !== rootPc) {
+    pitches.unshift(chord.bassPc + 12 * Math.floor((rootMidi - 1 - chord.bassPc) / 12));
+  }
+  return pitches;
 }
 
 // melodyOnTop: route through expandMelodyOnTop, which builds a fresh spaced
@@ -677,7 +701,8 @@ function expandMelodyOnTop(notes, chordPerBar, extensions, scaleIntervals, tonic
     const innerPcs = intervals.filter(iv => iv > 0)
       .sort((a, b) => prio(a) - prio(b))
       .map(iv => (rootPc + iv) % 12);
-    return { rootPc, innerPcs };
+    // Slash chords put the written bass note at the bottom of the voicing.
+    return { rootPc: chord?.bassPc ?? rootPc, innerPcs };
   });
 
   const out = [];
@@ -1009,6 +1034,11 @@ function generateWalkingBass({ tonicMidi, scaleIntervals, bars = 4, chordProgres
   const gate = quarter * (0.5 + lengthFactor * 0.45);
 
   const rootMidiOf = (chord) => {
+    // Slash chords: the walking line targets the written bass note.
+    if (chord && chord.bassPc != null) {
+      const { deg, off } = pcToDegreeOffset(chord.bassPc, scaleIntervals, tonicPc);
+      return scaleStepToMidi(deg, tonicPc, scaleIntervals, basePitch) + off;
+    }
     const degs = chordTonesInScale(chord, scaleIntervals, tonicPc);
     return scaleStepToMidi(degs[0], tonicPc, scaleIntervals, basePitch);
   };

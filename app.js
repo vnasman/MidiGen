@@ -1005,6 +1005,20 @@ function killAllPlayback() {
   }
 }
 
+// Max number of notes sounding at once across the main track + harmony voices.
+// Release edges sort before attack edges at the same tick, so back-to-back
+// notes don't count as overlapping.
+function maxSimultaneousNotes(mainNotes, voiceTracks) {
+  const edges = [];
+  const push = n => { edges.push([n.startTicks, 1], [n.startTicks + n.durationTicks, -1]); };
+  for (const n of mainNotes) push(n);
+  for (const tr of voiceTracks) for (const n of tr) push(n);
+  edges.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  let cur = 0, max = 1;
+  for (const [, d] of edges) { cur += d; if (cur > max) max = cur; }
+  return max;
+}
+
 async function play() {
   if (playStarting) return;       // ignore rapid double-clicks while we set up
   playStarting = true;
@@ -1015,6 +1029,18 @@ async function play() {
     killAllPlayback();
 
     const { main, voices, bpm, isDrums } = STATE.currentResult;
+
+    // Polyphony-aware headroom: N simultaneous voices sum to ~N× the amplitude
+    // of one, which slams the limiter into audible grinding on sustained chords.
+    // Scale the melodic synths down 6 dB per doubling so a 4-voice comp peaks
+    // near a single-voice lead; monophonic material stays at 0 dB.
+    if (!isDrums) {
+      const polyDb = Math.max(-18, -6 * Math.log2(maxSimultaneousNotes(main.notes, voices)));
+      synthMain.volume.value = polyDb;
+      synthHarm.volume.value = polyDb;
+      synthBend.volume.value = polyDb;
+    }
+
     Tone.Transport.bpm.value = bpm;
     const secPerTick = 60 / (bpm * PPQ);
     // Direct MIDI→Hz instead of allocating a Tone.Frequency object per note.

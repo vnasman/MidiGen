@@ -608,7 +608,7 @@ footer {
       <div id="panel-progression" class="prog-row">
         <label>Chord progression <span class="optional">(optional)</span>
           <div class="row">
-            <input type="text" id="progression" placeholder="e.g.  i VI III VII  or  Am F C G">
+            <input type="text" id="progression" placeholder="e.g.  i VI III VII  or  Am Am/G# Fmaj7 E7b9">
             <button id="clear-prog" class="ghost">Clear</button>
           </div>
         </label>
@@ -750,6 +750,19 @@ function parseProgression(text, tonicMidi, scaleIntervals) {
 function parseChordToken(token, tonicMidi, scaleIntervals) {
   let body = token.trim();
   if (!body) return null;
+
+  // Slash chord: split off a trailing "/<note>" bass (Am/G#, Cmaj7/G). The
+  // left side parses as the chord; the bass lands in `bassPc`, which the bass
+  // engines and chord voicings use as the bottom note.
+  let bassPc = null;
+  const slash = body.match(/^(.+)\/([A-G])([#b♭♯]?)$/);
+  if (slash) {
+    const acc = slash[3] === '♭' ? 'b' : slash[3] === '♯' ? '#' : slash[3];
+    const pc = pitchClassFromName(slash[2] + acc);
+    if (pc >= 0) { bassPc = pc; body = slash[1]; }
+  }
+
+  const withBass = c => { if (c && bassPc != null) c.bassPc = bassPc; return c; };
   let chromaShift = 0;
   while (body.startsWith('b') || body.startsWith('♭')) { chromaShift -= 1; body = body.slice(1); }
   while (body.startsWith('#') || body.startsWith('♯')) { chromaShift += 1; body = body.slice(1); }
@@ -766,7 +779,7 @@ function parseChordToken(token, tonicMidi, scaleIntervals) {
     const rootMidi = (Math.floor(tonicMidi / 12)) * 12 + scalePc;
     let quality = isLower ? 'm' : 'M';
     if (suffix.startsWith('°') || suffix.startsWith('dim')) quality = 'dim';
-    return buildChord(rootMidi, quality, suffix, token);
+    return withBass(buildChord(rootMidi, quality, suffix, token));
   }
 
   // Letter-name form
@@ -782,7 +795,7 @@ function parseChordToken(token, tonicMidi, scaleIntervals) {
     if (suffix.startsWith('dim') || suffix.startsWith('°')) quality = 'dim';
     if (suffix.startsWith('aug') || suffix.startsWith('+')) quality = 'aug';
     const rootMidi = (Math.floor(tonicMidi / 12)) * 12 + pc;
-    return buildChord(rootMidi, quality, suffix, token);
+    return withBass(buildChord(rootMidi, quality, suffix, token));
   }
 
   return null;
@@ -798,10 +811,20 @@ function buildChord(rootMidi, quality, suffix, label) {
   }
   if (suffix.includes('sus2')) intervals = [0, 2, 7];
   if (suffix.includes('sus4')) intervals = [0, 5, 7];
-  if (suffix.includes('maj7') || suffix.includes('M7')) intervals.push(11);
-  else if (suffix.includes('7')) intervals.push(10);
-  if (suffix.includes('9')) intervals.push(14);
-  if (suffix.includes('add9')) intervals.push(14);
+
+  const has = s => suffix.includes(s);
+  // Sixth chords (6 / m6 / 6-9): added sixth, no seventh implied.
+  if (has('6')) intervals.push(9);
+  // Sevenths: maj7/maj9/maj13 take the major 7th. A bare 7 — or the seventh
+  // implied by 9/13 chords (C9 = C7 + 9) — takes the b7; add9 and 6 imply none.
+  if (has('maj7') || has('M7') || has('maj9') || has('maj13')) intervals.push(11);
+  else if (has('7') || ((has('9') || has('13')) && !has('add9') && !has('6'))) intervals.push(10);
+  // Ninths: altered (b9/#9) take priority over the natural 9 (add9 included).
+  if (has('b9') || has('♭9')) intervals.push(13);
+  else if (has('#9') || has('♯9')) intervals.push(15);
+  else if (has('9')) intervals.push(14);
+  // Thirteenths.
+  if (has('13')) intervals.push(21);
 
   const pitchClasses = intervals.map(i => ((rootMidi + i) % 12 + 12) % 12);
   return { root: rootMidi, intervals, pitchClasses, label };
@@ -1674,6 +1697,19 @@ function chordTonesInScale(chord, scaleIntervals, tonicPc) {
   return degs.length ? degs : [0, 2, 4];
 }
 
+// Nearest scale degree + chromatic offset for an arbitrary pitch class — lets
+// a chromatic slash bass (Am/G# in A minor) be expressed on the scale-degree
+// grid the engines think in.
+function pcToDegreeOffset(pc, scaleIntervals, tonicPc) {
+  let best = 0, bestOff = 99;
+  for (let d = 0; d < scaleIntervals.length; d++) {
+    let off = pc - (tonicPc + scaleIntervals[d]) % 12;
+    if (off > 6) off -= 12; else if (off < -6) off += 12;
+    if (Math.abs(off) < Math.abs(bestOff)) { bestOff = off; best = d; }
+  }
+  return { deg: best, off: bestOff };
+}
+
 // Signed shortest distance from a to b on 7-step circle.
 function signedDelta(a, b) {
   let d = b - a;
@@ -1909,12 +1945,18 @@ function generateRiff({
     if (chord) {
       const chordDegs = chordTonesInScale(chord, scaleIntervals, tonicPc);
       const rootDeg = chordDegs[0];
+      // Bass-role: a slash chord's bass note (Am/G#) overrides the root anchor,
+      // so written bass lines — chromatic descents included — actually sound.
+      let anchorDeg = rootDeg, anchorOff = 0;
+      if (role === 'bass' && chord.bassPc != null) {
+        ({ deg: anchorDeg, off: anchorOff } = pcToDegreeOffset(chord.bassPc, scaleIntervals, tonicPc));
+      }
       for (const n of bar) {
         if (n.step === 0) {
-          // Always force beat 1 to chord root.
+          // Always force beat 1 to the anchor (chord root / slash bass).
           const octBase = Math.floor(n.scaleStep / 7) * 7;
-          n.scaleStep = octBase + rootDeg;
-          n.chromaticOffset = 0;
+          n.scaleStep = octBase + anchorDeg;
+          n.chromaticOffset = anchorOff;
         } else if (n.step === 8) {
           // Beat 3: nearest chord tone (third/fifth are great here).
           const currentMod = mod7(n.scaleStep);
@@ -2066,7 +2108,12 @@ function chordVoicingPitches(chord, voicing, extensions, scaleIntervals, tonicPc
 
   const baseOctave = Math.round((basePitch - rootPc) / 12);
   const rootMidi = rootPc + 12 * baseOctave;
-  return intervals.map(iv => rootMidi + iv);
+  const pitches = intervals.map(iv => rootMidi + iv);
+  // Slash chords: tuck the written bass note in just below the voicing.
+  if (chord && chord.bassPc != null && chord.bassPc !== rootPc) {
+    pitches.unshift(chord.bassPc + 12 * Math.floor((rootMidi - 1 - chord.bassPc) / 12));
+  }
+  return pitches;
 }
 
 // melodyOnTop: route through expandMelodyOnTop, which builds a fresh spaced
@@ -2141,7 +2188,8 @@ function expandMelodyOnTop(notes, chordPerBar, extensions, scaleIntervals, tonic
     const innerPcs = intervals.filter(iv => iv > 0)
       .sort((a, b) => prio(a) - prio(b))
       .map(iv => (rootPc + iv) % 12);
-    return { rootPc, innerPcs };
+    // Slash chords put the written bass note at the bottom of the voicing.
+    return { rootPc: chord?.bassPc ?? rootPc, innerPcs };
   });
 
   const out = [];
@@ -2473,6 +2521,11 @@ function generateWalkingBass({ tonicMidi, scaleIntervals, bars = 4, chordProgres
   const gate = quarter * (0.5 + lengthFactor * 0.45);
 
   const rootMidiOf = (chord) => {
+    // Slash chords: the walking line targets the written bass note.
+    if (chord && chord.bassPc != null) {
+      const { deg, off } = pcToDegreeOffset(chord.bassPc, scaleIntervals, tonicPc);
+      return scaleStepToMidi(deg, tonicPc, scaleIntervals, basePitch) + off;
+    }
     const degs = chordTonesInScale(chord, scaleIntervals, tonicPc);
     return scaleStepToMidi(degs[0], tonicPc, scaleIntervals, basePitch);
   };
@@ -3813,6 +3866,20 @@ function killAllPlayback() {
   }
 }
 
+// Max number of notes sounding at once across the main track + harmony voices.
+// Release edges sort before attack edges at the same tick, so back-to-back
+// notes don't count as overlapping.
+function maxSimultaneousNotes(mainNotes, voiceTracks) {
+  const edges = [];
+  const push = n => { edges.push([n.startTicks, 1], [n.startTicks + n.durationTicks, -1]); };
+  for (const n of mainNotes) push(n);
+  for (const tr of voiceTracks) for (const n of tr) push(n);
+  edges.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  let cur = 0, max = 1;
+  for (const [, d] of edges) { cur += d; if (cur > max) max = cur; }
+  return max;
+}
+
 async function play() {
   if (playStarting) return;       // ignore rapid double-clicks while we set up
   playStarting = true;
@@ -3823,6 +3890,18 @@ async function play() {
     killAllPlayback();
 
     const { main, voices, bpm, isDrums } = STATE.currentResult;
+
+    // Polyphony-aware headroom: N simultaneous voices sum to ~N× the amplitude
+    // of one, which slams the limiter into audible grinding on sustained chords.
+    // Scale the melodic synths down 6 dB per doubling so a 4-voice comp peaks
+    // near a single-voice lead; monophonic material stays at 0 dB.
+    if (!isDrums) {
+      const polyDb = Math.max(-18, -6 * Math.log2(maxSimultaneousNotes(main.notes, voices)));
+      synthMain.volume.value = polyDb;
+      synthHarm.volume.value = polyDb;
+      synthBend.volume.value = polyDb;
+    }
+
     Tone.Transport.bpm.value = bpm;
     const secPerTick = 60 / (bpm * PPQ);
     // Direct MIDI→Hz instead of allocating a Tone.Frequency object per note.

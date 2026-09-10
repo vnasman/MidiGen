@@ -74,6 +74,19 @@ function parseProgression(text, tonicMidi, scaleIntervals) {
 function parseChordToken(token, tonicMidi, scaleIntervals) {
   let body = token.trim();
   if (!body) return null;
+
+  // Slash chord: split off a trailing "/<note>" bass (Am/G#, Cmaj7/G). The
+  // left side parses as the chord; the bass lands in `bassPc`, which the bass
+  // engines and chord voicings use as the bottom note.
+  let bassPc = null;
+  const slash = body.match(/^(.+)\/([A-G])([#b♭♯]?)$/);
+  if (slash) {
+    const acc = slash[3] === '♭' ? 'b' : slash[3] === '♯' ? '#' : slash[3];
+    const pc = pitchClassFromName(slash[2] + acc);
+    if (pc >= 0) { bassPc = pc; body = slash[1]; }
+  }
+
+  const withBass = c => { if (c && bassPc != null) c.bassPc = bassPc; return c; };
   let chromaShift = 0;
   while (body.startsWith('b') || body.startsWith('♭')) { chromaShift -= 1; body = body.slice(1); }
   while (body.startsWith('#') || body.startsWith('♯')) { chromaShift += 1; body = body.slice(1); }
@@ -90,7 +103,7 @@ function parseChordToken(token, tonicMidi, scaleIntervals) {
     const rootMidi = (Math.floor(tonicMidi / 12)) * 12 + scalePc;
     let quality = isLower ? 'm' : 'M';
     if (suffix.startsWith('°') || suffix.startsWith('dim')) quality = 'dim';
-    return buildChord(rootMidi, quality, suffix, token);
+    return withBass(buildChord(rootMidi, quality, suffix, token));
   }
 
   // Letter-name form
@@ -106,7 +119,7 @@ function parseChordToken(token, tonicMidi, scaleIntervals) {
     if (suffix.startsWith('dim') || suffix.startsWith('°')) quality = 'dim';
     if (suffix.startsWith('aug') || suffix.startsWith('+')) quality = 'aug';
     const rootMidi = (Math.floor(tonicMidi / 12)) * 12 + pc;
-    return buildChord(rootMidi, quality, suffix, token);
+    return withBass(buildChord(rootMidi, quality, suffix, token));
   }
 
   return null;
@@ -122,10 +135,20 @@ function buildChord(rootMidi, quality, suffix, label) {
   }
   if (suffix.includes('sus2')) intervals = [0, 2, 7];
   if (suffix.includes('sus4')) intervals = [0, 5, 7];
-  if (suffix.includes('maj7') || suffix.includes('M7')) intervals.push(11);
-  else if (suffix.includes('7')) intervals.push(10);
-  if (suffix.includes('9')) intervals.push(14);
-  if (suffix.includes('add9')) intervals.push(14);
+
+  const has = s => suffix.includes(s);
+  // Sixth chords (6 / m6 / 6-9): added sixth, no seventh implied.
+  if (has('6')) intervals.push(9);
+  // Sevenths: maj7/maj9/maj13 take the major 7th. A bare 7 — or the seventh
+  // implied by 9/13 chords (C9 = C7 + 9) — takes the b7; add9 and 6 imply none.
+  if (has('maj7') || has('M7') || has('maj9') || has('maj13')) intervals.push(11);
+  else if (has('7') || ((has('9') || has('13')) && !has('add9') && !has('6'))) intervals.push(10);
+  // Ninths: altered (b9/#9) take priority over the natural 9 (add9 included).
+  if (has('b9') || has('♭9')) intervals.push(13);
+  else if (has('#9') || has('♯9')) intervals.push(15);
+  else if (has('9')) intervals.push(14);
+  // Thirteenths.
+  if (has('13')) intervals.push(21);
 
   const pitchClasses = intervals.map(i => ((rootMidi + i) % 12 + 12) % 12);
   return { root: rootMidi, intervals, pitchClasses, label };
