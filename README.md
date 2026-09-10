@@ -5,8 +5,8 @@ stabs, fugues and drums. Everything is generated locally, no server needed.
 
 Pick **what** you're writing (Bass, Lead, Melody, Chords, Arp, Drums) and a
 **feel** (French house, Disco, Rock, Reggae, Latin, Baroque, Jazz/Soul,
-Synth/Trance, Lo-fi, Minimal) — 60 combinations, each with its own engine and
-sound-design tip. Exports standard MIDI (.mid) that imports directly into
+Synth/Trance, Downtempo, Lo-fi, Minimal) — 66 combinations, each with its own
+engine and sound-design tip. Exports standard MIDI (.mid) that imports directly into
 Ableton, Logic, FL Studio and more. Drums export on channel 10 (General MIDI).
 
 **Live:** <https://vnasman.github.io/MidiGen/>

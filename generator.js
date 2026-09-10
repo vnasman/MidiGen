@@ -78,7 +78,8 @@ function generateBarMelody({ rhythm, style, scaleIntervals, tonicPc, chord, chro
   const out = [];
   let currentMod = previousDeg != null ? mod7(previousDeg) : null;
   let currentOctaveOffset = 0;
-  let lastDelta = 0;   // signed scale-step interval of the previous move (gap-fill)
+  let lastDelta = 0;        // signed scale-step interval of the previous move (gap-fill)
+  let prevScaleStep = null; // previous REALIZED scale step (absolute, octave included)
 
   const chordDegs = chordTonesInScale(chord, scaleIntervals, tonicPc);
   const rootDeg = chordDegs[0];
@@ -167,12 +168,19 @@ function generateBarMelody({ rhythm, style, scaleIntervals, tonicPc, chord, chro
     if (role === 'bass' && s === 8 && nextMod === rootDeg && rng() < 0.45) {
       currentOctaveOffset -= 1;
     }
-    // Keep within sensible bounds (tighter for bass).
-    const octMax = role === 'bass' ? 1 : 2;
+    // Keep within sensible bounds (tighter for bass and vocal).
+    const octMax = role === 'bass' || role === 'vocal' ? 1 : 2;
     const octMin = role === 'bass' ? -1 : -1;
+    // Vocal: realize the mod-7 move in absolute scale-step space, so stepwise
+    // motion stays stepwise across the octave boundary (deg 6 → deg 0 is a
+    // step up, not a leap down a seventh). Other roles keep the classic wrap.
+    if (role === 'vocal' && prevScaleStep != null) {
+      currentOctaveOffset = Math.round((prevScaleStep + stepDelta - nextMod) / 7);
+    }
     currentOctaveOffset = Math.max(octMin, Math.min(octMax, currentOctaveOffset));
 
     let scaleStep = nextMod + 7 * currentOctaveOffset;
+    prevScaleStep = scaleStep;
 
     let chromaticOffset = 0;
     if (chromatic > 0 && currentMod != null && rng() < chromatic) {
@@ -310,6 +318,7 @@ function generateRiff({
   role = 'lead',
   voicing = 'compact',          // chord spacing — only used when role === 'chord'
   extensions = 'none',          // chord type (m7/maj7/9/sus etc.) — only for chord-role
+  topline = 'lead',             // 'vocal' = singable top voice — only for chord-role
   chordProgression = [],
   sliders = {},
   seed = null,
@@ -358,11 +367,15 @@ function generateRiff({
     }
   }
 
+  // Chord-role can opt its top voice into the vocal engine's singability bias
+  // (stepwise motion + gap-fill), so each stab's highest note carries a melody.
+  const melodicRole = (role === 'chord' && topline === 'vocal') ? 'vocal' : role;
+
   // Generate motif A (the primary melodic idea).
   const rhythmA = generateBarRhythm(style, density, syncopation, rng, role);
   const motifA = generateBarMelody({
     rhythm: rhythmA, style, scaleIntervals, tonicPc,
-    chord: chordPerBar[0], chromatic, range, rng, role,
+    chord: chordPerBar[0], chromatic, range, rng, role: melodicRole,
   });
 
   // Generate motif B (independent idea — different rhythm, different starting pitch).
@@ -370,7 +383,7 @@ function generateRiff({
   const motifB = generateBarMelody({
     rhythm: rhythmB, style, scaleIntervals, tonicPc,
     chord: chordPerBar[Math.min(2, bars - 1)] ?? chordPerBar[0],
-    chromatic, range, rng, role,
+    chromatic, range, rng, role: melodicRole,
     previousDeg: role === 'bass' ? 4 : 3, // contrast B with A's starting region
   });
 
@@ -496,7 +509,7 @@ function generateRiff({
   // chord-tones from the current bar's harmony.
   let finalNotes = notes;
   if (role === 'chord') {
-    finalNotes = expandToChordStabs(notes, chordPerBar, voicing, extensions, scaleIntervals, tonicPc, adjustedBase, ticksPerBar, range);
+    finalNotes = expandToChordStabs(notes, chordPerBar, voicing, extensions, scaleIntervals, tonicPc, adjustedBase, ticksPerBar, range, topline === 'vocal');
   }
 
   return {
@@ -592,7 +605,10 @@ function chordVoicingPitches(chord, voicing, extensions, scaleIntervals, tonicPc
   return intervals.map(iv => rootMidi + iv);
 }
 
-function expandToChordStabs(notes, chordPerBar, voicing, extensions, scaleIntervals, tonicPc, basePitch, ticksPerBar, range = 0.5) {
+// melodyOnTop: fold harmony pitches that would land above the melody note down
+// an octave (or more) so the top voice really is the melody — used by recipes
+// whose topline runs through the vocal engine ("chords with the melody on top").
+function expandToChordStabs(notes, chordPerBar, voicing, extensions, scaleIntervals, tonicPc, basePitch, ticksPerBar, range = 0.5, melodyOnTop = false) {
   // The voicing is constant within a bar (chord doesn't change mid-bar in our
   // model), so precompute the clamped + deduplicated pitch list once per bar.
   // For a 16-bar chord-riff with ~150 onsets this avoids 140+ redundant builds,
@@ -619,9 +635,14 @@ function expandToChordStabs(notes, chordPerBar, voicing, extensions, scaleInterv
     const topPitch = n.pitch;
     const harmVel = Math.max(40, n.velocity - 10);
     out.push(n);
+    const emitted = new Set([topPitch]);
     for (let i = 0; i < voicingPitches.length; i++) {
-      const pitch = voicingPitches[i];
-      if (pitch === topPitch) continue;
+      let pitch = voicingPitches[i];
+      // Melody-on-top: fold pitches at/above the melody down by octaves so the
+      // singable line stays the highest voice. Duplicates after folding drop out.
+      if (melodyOnTop) while (pitch >= topPitch && pitch - 12 >= 0) pitch -= 12;
+      if (emitted.has(pitch) || (melodyOnTop && pitch >= topPitch)) continue;
+      emitted.add(pitch);
       out.push({
         pitch,
         startTicks: n.startTicks,
@@ -1216,6 +1237,7 @@ function velocityForStep(step, style, rng) {
   else base = 76;
   if (style === 'phantom') base += 4;
   if (style === 'pulse') base -= 4;
+  if (style === 'air') base -= 6;
   return Math.max(40, Math.min(120, Math.round(base + (rng() - 0.5) * 10)));
 }
 
@@ -1233,7 +1255,7 @@ function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
 // ----- Apply a harmonized voice -----
 // kind 'parallel' = literal semitone offset (`amount` in semitones, can be chromatic).
-// kind 'diatonic' = scale-step offset (`amount` in scale-degrees: +2 = ters upp, +4 = kvint upp etc.).
+// kind 'diatonic' = scale-step offset (`amount` in scale-degrees: +2 = third up, +4 = fifth up etc.).
 function applyHarmony(notes, { kind, amount, tonicPc, scaleIntervals, basePitch }) {
   return notes.map(n => {
     let pitch;

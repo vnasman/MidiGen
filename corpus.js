@@ -104,6 +104,17 @@ const RIFF_FRAGMENTS = [
   { style: 'latin', steps: [0, 4, 2, 4, 0, 4, 2, 4] },
   { style: 'latin', steps: [7, 4, 2, 4, 7, 5, 4, 2] },
   { style: 'latin', steps: [0, 2, 4, 5, 7, 5, 4, 2] },
+
+  // ---- Air / downtempo French pop ----
+  // Characteristics: long falling lines, gentle arch shapes, 2nd/6th color
+  // tones (add9 flavor), leaps that resolve back by step. Moon Safari DNA.
+  { style: 'air', steps: [4, 2, 0, 1, 0, -1, 0, 2] },     // fall with add9 neighbor
+  { style: 'air', steps: [7, 5, 4, 2, 4, 2, 0, 2] },      // long descent, soft landing
+  { style: 'air', steps: [0, 2, 4, 5, 4, 2, 1, 0] },      // arch with 2nd color going down
+  { style: 'air', steps: [5, 4, 2, 4, 2, 0, -2, 0] },     // 6th color, dips below tonic
+  { style: 'air', steps: [0, 4, 2, 5, 4, 2, 0, -3] },     // leap up, stepwise resolve
+  { style: 'air', steps: [2, 0, 2, 4, 2, 1, 0, -3] },     // narrow, wistful
+  { style: 'air', steps: [9, 7, 5, 4, 5, 4, 2, 0] },      // high entry, drifting down
 ];
 
 // Rhythm cells per beat (4 sixteenth-positions). 1 = onset, 0 = rest.
@@ -149,6 +160,8 @@ const STYLE_RHYTHM_WEIGHTS = {
   reggae:  { A: 2, B: 2, C: 7, D: 1, E: 2, F: 1, G: 1, H: 6, I: 4, J: 3, K: 2 },
   // Latin — syncopated, clave feel
   latin:   { A: 2, B: 3, C: 3, D: 3, E: 5, F: 4, G: 2, H: 3, I: 1, J: 6, K: 4 },
+  // Air / downtempo — sparse, on-beat leaning, plenty of space between notes
+  air:     { A: 7, B: 4, C: 2, D: 1, E: 1, F: 1, G: 1, H: 2, I: 5, J: 2, K: 1 },
 };
 
 // Phrase structures: which role to use for each bar. Each structure carries a
@@ -324,6 +337,15 @@ const DRUM_STYLES = {
     [GM.OHAT]:   { prob: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,.4,0], vel: 78 },
     [GM.SHAKER]: { prob: [.3,.3,.3,.3, .3,.3,.3,.3, .3,.3,.3,.3, .3,.3,.3,.3], vel: 50, ghost: true },
   },
+  // Downtempo / trip-hop-lite: kick on 1 with an 8th-note push into beat 3,
+  // snare on 2 & 4, sparse hats. The "Sexy Boy" school — soft and steady.
+  downtempo: {
+    [GM.KICK]:  { prob: [1,0,0,0, 0,0,.35,0, .8,0,0,0, 0,0,0,0], vel: 102 },
+    [GM.SNARE]: { prob: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], vel: 88 },
+    [GM.CHAT]:  { prob: [1,0,.55,0, 1,0,.55,0, 1,0,.55,0, 1,0,.55,0], vel: 56 },
+    [GM.OHAT]:  { prob: [0,0,0,0, 0,0,0,0, 0,0,.3,0, 0,0,0,0], vel: 68 },
+    [GM.TAMB]:  { prob: [0,.15,0,.15, 0,.15,0,.15, 0,.15,0,.15, 0,.15,0,.15], vel: 46, ghost: true },
+  },
   // Lo-fi boom bap: lazy kick, relaxed snare around 2/4, sparse hats.
   lofi: {
     [GM.KICK]:   { prob: [1,0,0,.25, 0,0,.4,0, .6,0,.3,0, 0,0,0,0], vel: 100 },
@@ -383,6 +405,12 @@ const DRUM_STYLES = {
     [GM.WOODBLOCK_LO]:{ prob: [0,0,0,0, 0,0,.5,0, 0,.3,0,0, 0,0,.5,0], vel: 68 },
     [GM.COWBELL]:     { prob: [0,0,0,.4, 0,0,0,0, 0,0,0,.4, 0,0,0,0], vel: 70, ghost: true },
     [GM.CLAVE]:       { prob: [0,.3,0,0, 0,0,0,.35, 0,.3,0,0, 0,0,.35,0], vel: 76, ghost: true },
+  },
+  percDowntempo: {
+    [GM.SHAKER]:     { prob: [.6,0,.35,0, .6,0,.35,0, .6,0,.35,0, .6,0,.35,0], vel: 50, ghost: true },
+    [GM.TRIANGLE]:   { prob: [.4,0,0,0, 0,0,0,0, .4,0,0,0, 0,0,0,0], vel: 56 },
+    [GM.CONGA_OPEN]: { prob: [0,0,0,0, 0,0,.3,0, 0,0,0,0, 0,0,.4,0], vel: 72 },
+    [GM.RIM]:        { prob: [0,0,.15,0, 0,0,0,.15, 0,.15,0,0, 0,0,.15,0], vel: 46, ghost: true },
   },
   percLofi: {
     [GM.SHAKER]:      { prob: [.7,0,.4,.2, .7,0,.4,0, .7,0,.4,.2, .7,0,.4,0], vel: 48, ghost: true },

@@ -63,6 +63,7 @@ const GENRES = [
   { id: 'baroque', label: 'Baroque' },
   { id: 'jazz',    label: 'Jazz/Soul' },
   { id: 'synth',   label: 'Synth/Trance' },
+  { id: 'downtempo', label: 'Downtempo' },
   { id: 'lofi',    label: 'Lo-fi' },
   { id: 'minimal', label: 'Minimal' },
 ];
@@ -85,6 +86,7 @@ const GENRE_GROOVE = {
   disco:   { swing: 0.25, pocket: 0.25 },
   reggae:  { swing: 0.25, pocket: 0.50 },
   jazz:    { swing: 0.75, pocket: 0.50 },
+  downtempo: { pocket: 0.30 },
   lofi:    { swing: 0.50, pocket: 0.75 },
   // rock, latin, baroque, synth, minimal: straight (no entry)
 };
@@ -101,6 +103,7 @@ const RECIPES = {
     baroque: { engine: 'riff', style: 'baroque', sliders: { length: 0.55, density: 0.45 }, tip: 'Continuo: a walking bass voice — cello or organ pedal. Sits beautifully under a fugue lead.' },
     jazz:    { engine: 'walking', sliders: { density: 0.40, chromatic: 0.70 }, tip: 'Walking bass: root on beat 1, chromatic approach into every new chord. Swing the 8ths in your DAW. Upright/finger bass.' },
     synth:   { engine: 'riff', style: 'acid', acid: true, sliders: { density: 0.65, length: 0.35 }, tip: '303 acid: overlapping notes = glide on TB-303-style synths (set mono + glide). The accents do the rest. 125–140 BPM.' },
+    downtempo: { engine: 'riff', style: 'air', sliders: { density: 0.40, syncopation: 0.25, length: 0.75, register: 0.10, variation: 0.30 }, tip: 'Melodic round bass à la "La Femme d\'Argent" — soft fingered tone, long notes, let it wander. Dorian is home turf. 85–100 BPM.' },
     lofi:    { engine: 'riff', style: 'pulse', sliders: { density: 0.25, length: 0.70 }, tip: 'Half-time sub bass, few notes, let it sway. Sine or soft saw. 70–90 BPM.' },
     minimal: { engine: 'riff', style: 'pulse', sliders: { density: 0.30, variation: 0.10 }, tip: 'Pulsing root bass — hypnotic repetition. Sidechain against the kick. 120–130 BPM.' },
   },
@@ -113,6 +116,7 @@ const RECIPES = {
     baroque: { engine: 'riff', style: 'baroque', sliders: { density: 0.55, length: 0.70, chromatic: 0.15 }, tip: 'Fugue subject: add "Fifth up diatonic / 1 bar later" + "Octave up / 2 bars later" for an exposition. Organ/harpsichord.' },
     jazz:    { engine: 'riff', style: 'dance', sliders: { chromatic: 0.30, syncopation: 0.55, length: 0.40 }, tip: 'Bluesy lead — try the blues or dorian scale. Rhodes or guitar. Swing the 8ths.' },
     synth:   { engine: 'riff', style: 'phantom', sliders: { density: 0.85, length: 0.30, chromatic: 0.40 }, tip: 'Fast chromatic synth lead à la Justice "Phantom". Hard saw + unison. 120–130 BPM.' },
+    downtempo: { engine: 'riff', style: 'air', sliders: { density: 0.35, length: 0.80, register: 0.60, variation: 0.45 }, tip: 'Moog solo in the Air school — mono synth with portamento and spring reverb. Long falling phrases. 80–100 BPM.' },
     lofi:    { engine: 'riff', style: 'ambient', sliders: { density: 0.30, length: 0.70, variation: 0.45 }, tip: 'Soft lead over a lo-fi beat — Rhodes/guitar with tape wobble. 70–85 BPM.' },
     minimal: { engine: 'berlin', sliders: { density: 0.60, variation: 0.25, length: 0.25, register: 0.45 }, tip: 'Berlin school sequence: exact repetition with small mutations every 4 bars. Analog mono synth + delay. Tangerine Dream / melodic techno.' },
   },
@@ -125,6 +129,7 @@ const RECIPES = {
     baroque: { engine: 'vocal', style: 'baroque', sliders: { density: 0.35, length: 0.90 }, tip: 'Aria line: stepwise, long phrasing. Beautiful on strings or an oboe patch.' },
     jazz:    { engine: 'vocal', style: 'anthem', sliders: { chromatic: 0.15, syncopation: 0.35 }, tip: 'Standards melody with chromatic color tones. Swing the phrasing in your DAW.' },
     synth:   { engine: 'vocal', style: 'italo', sliders: { density: 0.30, length: 0.75 }, tip: '80s synth-pop topline — singable over an italo arp. 110–125 BPM.' },
+    downtempo: { engine: 'vocal', style: 'air', sliders: { density: 0.22, length: 0.90, syncopation: 0.10, bends: 0.35 }, tip: 'Moon Safari topline: long falling phrases, stepwise, room to breathe. Warm pad, Moog or wordless vocal. 80–100 BPM.' },
     lofi:    { engine: 'vocal', style: 'ambient', sliders: { density: 0.18, length: 0.95 }, tip: 'Dreamy, sparse melody — few notes, lots of space. Soft sine lead or humming.' },
     minimal: { engine: 'vocal', style: 'pulse', sliders: { density: 0.20, variation: 0.30 }, tip: 'Minimal hook — two or three notes that stick. Less is more.' },
   },
@@ -137,6 +142,7 @@ const RECIPES = {
     baroque: { engine: 'riff', style: 'baroque', voicing: 'compact', extensions: 'none', sliders: { length: 0.50, syncopation: 0.15 }, tip: 'Harpsichord blocks — continuo realization. Works on a plucky synth too.' },
     jazz:    { engine: 'riff', style: 'anthem', voicing: 'wide', extensions: 'thirteenth', sliders: { density: 0.30, length: 0.70, variation: 0.50 }, tip: 'Neo-soul: m13/maj13 spread across two octaves. Rhodes with chorus. D\'Angelo/Glasper. 75–95 BPM.' },
     synth:   { engine: 'riff', style: 'filter', voicing: 'spread', extensions: 'sus4', sliders: { density: 0.75, length: 0.12 }, tip: 'Trance gate: dense sus4 stabs through a gate/sidechain. Supersaw. 132–142 BPM.' },
+    downtempo: { engine: 'riff', style: 'air', voicing: 'wide', extensions: 'ninth', topline: 'vocal', sliders: { density: 0.30, length: 0.85, syncopation: 0.15 }, tip: 'Chords with the melody on top: the highest voice is a singable line, m9/maj9 stacked underneath. Wurlitzer or Rhodes, slow harmonic rhythm. 80–100 BPM.' },
     lofi:    { engine: 'riff', style: 'ambient', voicing: 'compact', extensions: 'ninth', sliders: { density: 0.18, length: 0.85 }, tip: 'Lo-fi keys: m9 at slow tempo, tape wobble + vinyl crackle. 70–85 BPM.' },
     minimal: { engine: 'riff', style: 'pulse', voicing: 'compact', extensions: 'sus2', sliders: { density: 0.25, length: 0.50 }, tip: 'Sparse sus2 stabs — open, floating. Lots of reverb, lots of patience.' },
   },
@@ -149,6 +155,7 @@ const RECIPES = {
     baroque: { engine: 'arp', pattern: 'alberti', sliders: { density: 0.60, length: 0.50 }, tip: 'Alberti bass / broken chords à la a Bach prelude. Harpsichord, piano or pluck. Timeless.' },
     jazz:    { engine: 'arp', pattern: 'updown', sliders: { density: 0.30, length: 0.55 }, tip: 'Broken chords in 8ths — comping behind a melody. Add 7ths via the progression (Am7, Dm7...).' },
     synth:   { engine: 'arp', pattern: 'up', sliders: { density: 0.80, range: 0.70, length: 0.20 }, tip: 'Trance arp: 16ths across 2 octaves. Supersaw + 3/16 delay + sidechain. 132–142 BPM.' },
+    downtempo: { engine: 'arp', pattern: 'updown', sliders: { density: 0.30, length: 0.80, variation: 0.25, register: 0.50 }, tip: 'Slow broken chords — harp or e-piano with the sustain pedal down. Feed it maj7/m9 chords. 80–100 BPM.' },
     lofi:    { engine: 'arp', pattern: 'down', sliders: { density: 0.30, length: 0.70, variation: 0.30 }, tip: 'Falling, soft arp — harp/kalimba feel over a lo-fi beat.' },
     minimal: { engine: 'arp', pattern: 'octave', sliders: { density: 0.60, register: 0.45 }, tip: 'Octave pulse in the mid register — a hypnotic motor. Plucky mono synth. 120–130 BPM.' },
   },
@@ -161,6 +168,7 @@ const RECIPES = {
     baroque: { engine: 'drums', drumStyle: 'rock', sliders: { density: 0.35, variation: 0.50 }, tip: 'The baroque era had no drum kit — this is an anachronistic rock beat. Treat the tom fills as timpani, or skip.' },
     jazz:    { engine: 'drums', drumStyle: 'funkbreak', sliders: { density: 0.55, variation: 0.45 }, tip: 'Ghost notes + syncopation — the closest this app gets to swing. Swing the 8ths in your DAW and add a ride.' },
     synth:   { engine: 'drums', drumStyle: 'techno', sliders: { density: 0.55, syncopation: 0.30 }, tip: 'Machine 16th hi-hats, hard kick. 125–140 BPM.' },
+    downtempo: { engine: 'drums', drumStyle: 'downtempo', tip: 'Soft downtempo kit: kick on 1 with a push into 3, snare on 2 & 4, sparse hats. Or try Rhythm box "Pop \'78" — the CR-78 Air actually used. 80–100 BPM.' },
     lofi:    { engine: 'drums', drumStyle: 'lofi', tip: 'Lazy boom bap: sloppy kick, relaxed snare. Add swing + vinyl crackle. 70–90 BPM.' },
     minimal: { engine: 'drums', drumStyle: 'techno', sliders: { density: 0.35, variation: 0.15 }, tip: 'Stripped-down techno — few elements, lots of repetition. 122–132 BPM.' },
   },
@@ -173,6 +181,7 @@ const RECIPES = {
     baroque: { engine: 'drums', drumStyle: 'percBaroque', sliders: { density: 0.40 }, tip: 'Tambourine + triangle — folk-dance percussion, period-appropriate for once.' },
     jazz:    { engine: 'drums', drumStyle: 'percJazz', tip: 'Shaker with swing + rim clicks. Subtle — let the kit breathe.' },
     synth:   { engine: 'drums', drumStyle: 'percSynth', tip: 'Electronic blips: woodblocks, cowbell and clave, 808-style syncopation.' },
+    downtempo: { engine: 'drums', drumStyle: 'percDowntempo', sliders: { density: 0.40 }, tip: 'Shaker, triangle and a lone conga — barely-there glue for a downtempo groove.' },
     lofi:    { engine: 'drums', drumStyle: 'percLofi', tip: 'Soft shaker ghosts, snaps and a muted conga. Tape-saturate and tuck under the beat.' },
     minimal: { engine: 'drums', drumStyle: 'percMinimal', sliders: { variation: 0.15 }, tip: 'Sparse woodblock ticks and a lone shaker — microhouse pointillism. 122–132 BPM.' },
   },
@@ -214,6 +223,7 @@ const STATE = {
   acid: false,           // 303 slides on/off
   voicing: 'compact',
   extensions: 'none',
+  topline: 'lead',       // chord-role top voice: 'lead' or 'vocal' (singable)
   drumStyle: null,
   sliders: {},
   voices: [],
@@ -222,15 +232,15 @@ const STATE = {
 };
 
 const EXTENSION_OPTIONS = [
-  { value: 'none',       label: 'Triad (3-toners)' },
-  { value: 'seven',      label: '7:a (m7 / maj7)' },
+  { value: 'none',       label: 'Triad (3 notes)' },
+  { value: 'seven',      label: '7th (m7 / maj7)' },
   { value: 'dom7',       label: 'Dominant 7 (b7)' },
-  { value: 'ninth',      label: '9:a (m9 / maj9)' },
+  { value: 'ninth',      label: '9th (m9 / maj9)' },
   { value: 'add9',       label: 'add9 (triad + 9)' },
-  { value: 'six',        label: 'Sext (6:a)' },
+  { value: 'six',        label: '6th (triad + 6)' },
   { value: 'sus2',       label: 'sus2' },
   { value: 'sus4',       label: 'sus4' },
-  { value: 'thirteenth', label: '13:a (full jazz)' },
+  { value: 'thirteenth', label: '13th (full jazz)' },
 ];
 
 let synthMain, synthHarm, synthBend, transportPart;
@@ -367,6 +377,7 @@ function applyCombo(roleId, genreId, { audition = false } = {}) {
   STATE.acid = !!recipe.acid;
   STATE.voicing = recipe.voicing ?? 'compact';
   STATE.extensions = recipe.extensions ?? 'none';
+  STATE.topline = recipe.topline ?? 'lead';
   STATE.drumStyle = recipe.drumStyle ?? null;
 
   const base = ROLE_BASE[roleId];
@@ -424,7 +435,7 @@ function refreshPanelVisibility() {
   const voicesPanel = document.getElementById('panel-voices');
   if (voicesPanel) voicesPanel.style.display = isDrums ? 'none' : '';
 
-  // Key + scale selects live inside labels in the Tonart & form grid.
+  // Key + scale selects live inside labels in the Music panel grid.
   for (const id of ['root', 'scale']) {
     const el = document.getElementById(id);
     if (el) el.closest('label').style.display = isDrums ? 'none' : '';
@@ -650,6 +661,7 @@ function generate(opts = {}) {
       role: genRole,
       voicing: STATE.voicing,
       extensions: STATE.extensions,
+      topline: STATE.topline,
     });
     if (STATE.acid) {
       applyAcidSlides(result, 0.45 + (STATE.sliders.syncopation ?? 0.3) * 0.4, mulberry32(seed ^ 0x5EED));
