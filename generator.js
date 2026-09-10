@@ -605,10 +605,13 @@ function chordVoicingPitches(chord, voicing, extensions, scaleIntervals, tonicPc
   return intervals.map(iv => rootMidi + iv);
 }
 
-// melodyOnTop: fold harmony pitches that would land above the melody note down
-// an octave (or more) so the top voice really is the melody — used by recipes
-// whose topline runs through the vocal engine ("chords with the melody on top").
+// melodyOnTop: route through expandMelodyOnTop, which builds a fresh spaced
+// voicing under each melody note instead of folding the stab voicing — used by
+// recipes whose topline runs through the vocal engine ("melody in the chords").
 function expandToChordStabs(notes, chordPerBar, voicing, extensions, scaleIntervals, tonicPc, basePitch, ticksPerBar, range = 0.5, melodyOnTop = false) {
+  if (melodyOnTop) {
+    return expandMelodyOnTop(notes, chordPerBar, extensions, scaleIntervals, tonicPc, ticksPerBar);
+  }
   // The voicing is constant within a bar (chord doesn't change mid-bar in our
   // model), so precompute the clamped + deduplicated pitch list once per bar.
   // For a 16-bar chord-riff with ~150 onsets this avoids 140+ redundant builds,
@@ -635,19 +638,82 @@ function expandToChordStabs(notes, chordPerBar, voicing, extensions, scaleInterv
     const topPitch = n.pitch;
     const harmVel = Math.max(40, n.velocity - 10);
     out.push(n);
-    const emitted = new Set([topPitch]);
     for (let i = 0; i < voicingPitches.length; i++) {
-      let pitch = voicingPitches[i];
-      // Melody-on-top: fold pitches at/above the melody down by octaves so the
-      // singable line stays the highest voice. Duplicates after folding drop out.
-      if (melodyOnTop) while (pitch >= topPitch && pitch - 12 >= 0) pitch -= 12;
-      if (emitted.has(pitch) || (melodyOnTop && pitch >= topPitch)) continue;
-      emitted.add(pitch);
+      const pitch = voicingPitches[i];
+      if (pitch === topPitch) continue;
       out.push({
         pitch,
         startTicks: n.startTicks,
         durationTicks: n.durationTicks,
         velocity: harmVel,
+        scaleStep: n.scaleStep,
+        chromaticOffset: 0,
+      });
+    }
+  }
+  return out;
+}
+
+// Melody-on-top voicing: build a fresh 3–4-voice comp per onset — the melody,
+// up to two color tones (3rd/7th preferred) spaced below it, and the root at
+// the bottom. Folding a wide stab voicing under the melody packs seconds into
+// the low register (the 9th lands a whole tone over the root), which reads as
+// mud; constructed spacing keeps sustained chords clean on any synth.
+function expandMelodyOnTop(notes, chordPerBar, extensions, scaleIntervals, tonicPc, ticksPerBar) {
+  const pcsByBar = chordPerBar.map(chord => {
+    let intervals, rootPc;
+    if (chord) {
+      intervals = chord.intervals.slice();
+      rootPc = chord.root % 12;
+    } else {
+      intervals = [0, scaleIntervals[2] ?? 3, scaleIntervals[4] ?? 7];
+      rootPc = tonicPc;
+    }
+    const isMinor = intervals.includes(3) && !intervals.includes(4);
+    intervals = applyExtensions(intervals, extensions, isMinor);
+    // Color-tone priority: 3rd and 7th carry the harmony; 9/6/sus next; 5th last.
+    const prio = iv => (iv === 3 || iv === 4) ? 0 : (iv === 10 || iv === 11) ? 1
+                     : iv === 14 ? 2 : iv === 9 ? 3 : (iv === 2 || iv === 5) ? 4 : 5;
+    const innerPcs = intervals.filter(iv => iv > 0)
+      .sort((a, b) => prio(a) - prio(b))
+      .map(iv => (rootPc + iv) % 12);
+    return { rootPc, innerPcs };
+  });
+
+  const out = [];
+  for (const n of notes) {
+    out.push(n);
+    const barIdx = Math.floor(n.startTicks / ticksPerBar);
+    const { rootPc, innerPcs } = pcsByBar[barIdx] ?? pcsByBar[0];
+    const melody = n.pitch;
+    const emitted = new Set([melody]);
+    const harm = [];
+
+    // Up to two inner voices walking down from just below the melody, each at
+    // least a 3rd below the voice above (no adjacent-second clusters).
+    let ceiling = melody - 3;
+    for (const pc of innerPcs) {
+      if (harm.length >= 2) break;
+      if (pc === melody % 12) continue;               // don't double the melody
+      const p = pc + 12 * Math.floor((ceiling - pc) / 12);
+      if (p < 45 || emitted.has(p)) continue;         // low-interval mud guard
+      emitted.add(p);
+      harm.push(p);
+      ceiling = p - 3;
+    }
+
+    // Root at the bottom, clear of the inner voices.
+    const lowest = harm.length ? harm[harm.length - 1] : melody;
+    let rootP = rootPc + 12 * Math.floor((lowest - 5 - rootPc) / 12);
+    while (rootP < 36) rootP += 12;
+    if (rootP <= lowest - 3 && !emitted.has(rootP)) harm.push(rootP);
+
+    for (const pitch of harm) {
+      out.push({
+        pitch,
+        startTicks: n.startTicks,
+        durationTicks: n.durationTicks,
+        velocity: Math.max(40, n.velocity - 16),
         scaleStep: n.scaleStep,
         chromaticOffset: 0,
       });
