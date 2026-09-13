@@ -86,9 +86,9 @@ const GENRE_GROOVE = {
   disco:   { swing: 0.25, pocket: 0.25 },
   reggae:  { swing: 0.25, pocket: 0.50 },
   jazz:    { swing: 0.75, pocket: 0.50 },
-  downtempo: { pocket: 0.30 },
   lofi:    { swing: 0.50, pocket: 0.75 },
-  // rock, latin, baroque, synth, minimal: straight (no entry)
+  // rock, latin, baroque, synth, downtempo, minimal: straight (no entry) —
+  // downtempo stays machine-steady (the CR-78 school); add Pocket to taste.
 };
 
 // engine: 'riff' (Markov + templates), 'vocal' (riff with singability bias),
@@ -622,8 +622,9 @@ function generate(opts = {}) {
       seed,
     });
     applyGroove(result.notes, STATE.sliders.swing ?? 0, STATE.sliders.pocket ?? 0,
-                result.ticksPerBar / 16, true, mulberry32(seed ^ 0xBEA7));
+                result.ticksPerBar / 16, true);
     trimSamePitchOverlaps(result.notes);
+    clampToPhrase(result.notes, ui.bars * result.ticksPerBar);
     STATE.currentResult = { main: result, voices: [], bars: ui.bars, bpm: ui.bpm, isDrums: true };
     document.getElementById('seed-display').textContent =
       `seed: ${seed.toString(16).padStart(8, '0')}   ·   ${ui.bars} bars @ ${ui.bpm} bpm   ·   ${comboLabel()}`;
@@ -670,8 +671,9 @@ function generate(opts = {}) {
 
   // Groove applies before voices are built, so harmony voices inherit the feel.
   applyGroove(result.notes, STATE.sliders.swing ?? 0, STATE.sliders.pocket ?? 0,
-              result.ticksPerBar / 16, false, mulberry32(seed ^ 0xBEA7));
+              result.ticksPerBar / 16, false);
   trimSamePitchOverlaps(result.notes);
+  clampToPhrase(result.notes, ui.bars * result.ticksPerBar);
 
   // Pitch bends (scoops/vibrato/fall-offs) — melodic roles only.
   if (BEND_ROLES.includes(STATE.role) && (STATE.sliders.bends ?? 0) > 0) {

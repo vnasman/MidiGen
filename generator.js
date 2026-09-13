@@ -1181,11 +1181,13 @@ function generateBerlin({ tonicMidi, scaleIntervals, bars = 4, chordProgression 
 // pocket 0..1: laid-back feel. For drums the kick stays anchored to the grid
 // while snare/clap sit furthest back and hats/percussion relax slightly —
 // that gap IS the pocket. Melodic material relaxes everything except bar
-// downbeats. A few ticks of human jitter come along for free.
-function applyGroove(notes, swing, pocket, ticksPerStep, isDrums, rng) {
+// downbeats. Shifts are deterministic per step — no random jitter — so
+// exported files stay consistent and quantize cleanly in a DAW.
+function applyGroove(notes, swing, pocket, ticksPerStep, isDrums) {
   if (swing <= 0 && pocket <= 0) return;
   for (const n of notes) {
     const step = Math.round(n.startTicks / ticksPerStep);
+    if (step % 16 === 0) continue;   // bar downbeats stay anchored to the grid
     let delay = 0;
     if (swing > 0) {
       if (step % 4 === 2) delay += swing * ticksPerStep * 0.66;
@@ -1198,11 +1200,22 @@ function applyGroove(notes, swing, pocket, ticksPerStep, isDrums, rng) {
         else if (n.pitch !== 36) delay += layback * 0.6;              // hats/perc
         // kick (36) stays anchored
       } else {
-        delay += layback * (step % 16 === 0 ? 0.3 : 1);
+        delay += layback;
       }
-      delay += (rng() - 0.5) * pocket * 8;   // ±4 ticks of human jitter
     }
     if (delay !== 0) n.startTicks = Math.max(0, Math.round(n.startTicks + delay));
+  }
+}
+
+// Phrase-end clamp: groove shifts and generous note lengths can push a final
+// note-off past the last bar line, which makes a DAW size the imported region
+// to N+1 bars (and breaks clean looping). Clamp every note-off to the exact
+// phrase length so a file is always exactly N bars.
+function clampToPhrase(notes, totalTicks) {
+  for (const n of notes) {
+    if (n.startTicks + n.durationTicks > totalTicks) {
+      n.durationTicks = Math.max(20, totalTicks - n.startTicks);
+    }
   }
 }
 
